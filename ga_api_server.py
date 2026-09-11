@@ -3,7 +3,7 @@
 GA API Server - OpenAI Compatible API for GenericAgent
 将整个 GA 系统封装为 OpenAI 兼容的 API 服务
 """
-import os, sys, json, time, threading, re, queue, asyncio
+import os, sys, json, time, threading, re, queue, asyncio, urllib.request, urllib.error
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,11 +14,6 @@ from contextlib import asynccontextmanager
 script_dir = Path(__file__).parent.absolute()
 sys.path.insert(0, str(script_dir))
 
-from agentmain import GenericAgent
-import sys
-sys.path.insert(0, str(script_dir / 'frontends'))
-from session_names import path_for, set_name
-from continue_cmd import continue_inplace
 
 # 与桌面端 frontends/desktop_bridge.py 的 _FINAL_INFO_RE 保持一致；
 # API 服务不导入桌面 WebSocket 模块，避免引入不相关的 aiohttp 依赖。
@@ -138,6 +133,10 @@ class ChatCompletionRequest(BaseModel):
     instructions: Any = ""
     system: Any = ""
     developer: Any = ""
+    # Attachment metadata is passed untouched to desktop_bridge.
+    files: Optional[List[Dict[str, Any]]] = None
+    imageMetas: Optional[List[Dict[str, Any]]] = None
+    images: Optional[List[Any]] = None
 
 class ChatCompletionResponse(BaseModel):
     id: str
@@ -148,8 +147,12 @@ class ChatCompletionResponse(BaseModel):
 
 # ==================== 全局状态 ====================
 
-api_agent: Optional[GenericAgent] = None
-api_agent_thread: Optional[threading.Thread] = None
+# API is a transport-only facade over the already-running desktop bridge.
+BRIDGE_URL = os.environ.get("GA_DESKTOP_BRIDGE_URL", "http://127.0.0.1:14168")
+BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-53138a368967")
+BRIDGE_SESSION_TITLE = "Xavier-chat"
+api_agent = None
+api_agent_thread = None
 api_lock = threading.Lock()  # 排队执行
 confirmation_tokens: Dict[str, Dict] = {}  # 确认令牌缓存
 
@@ -216,45 +219,11 @@ def check_confirmation_token(messages: List[Message]) -> bool:
 
 @asynccontextmanager
 async def lifespan(app):
-    """应用生命周期管理"""
-    global api_agent, api_agent_thread
-
-    session_name = "Xavier-chat"
-    print("🚀 Starting GenericAgent API Server...")
-    print(f"   Model: {CONFIG['model']['id']}")
-    print(f"   Session: {session_name}")
-    print(f"   Auth: {'Enabled' if API_KEY else 'Disabled (⚠️  Open Access)'}")
-
-    # 保持桌面端原生逻辑不变：API 启动时查找 Xavier-chat，有则原地接管，无则创建新会话。
-    previous_path = path_for(session_name)
-    
-    if previous_path:
-        # 旧会话存在：先创建 agent，再用 continue_inplace 原地接管既有日志
-        api_agent = GenericAgent()
-        api_agent.peer_hint = True
-        api_agent.verbose = True
-        
-        message, ok = continue_inplace(api_agent, previous_path, allow_empty=True)
-        print(f"   Resume {session_name}: {message.replace(chr(10), ' ')}")
-        if not ok:
-            print("   ⚠️  Previous session could not be restored as native; continuing with available state.")
-    else:
-        # 首次创建：新建 agent 后，把它的新日志绑定为 Xavier-chat
-        api_agent = GenericAgent()
-        api_agent.peer_hint = True
-        api_agent.verbose = True
-        set_name(api_agent.log_path, session_name)
-        print(f"   New session: {session_name}")
-
-    api_agent_thread = threading.Thread(target=api_agent.run, daemon=True)
-    api_agent_thread.start()
-
-    print("✅ GenericAgent initialized and ready!")
-    
-    yield  # 服务器运行期间
-    
-    # 清理逻辑（如果需要）
-    print("🛑 Shutting down GenericAgent API Server...")
+    """Attach to the desktop bridge; never create or restore a GA instance."""
+    print("🚀 Starting transport API for existing desktop session...")
+    print(f"   Bridge: {BRIDGE_URL}  Session: {BRIDGE_SESSION_TITLE} ({BRIDGE_SESSION_ID})")
+    yield
+    print("🛑 Shutting down transport API (desktop GA remains running)...")
 
 app = FastAPI(
     title="GenericAgent API",
@@ -295,7 +264,9 @@ async def health_check():
     """健康检查"""
     return {
         "status": "ok",
-        "agent_running": api_agent is not None and api_agent_thread.is_alive() if api_agent_thread else False
+        "agent_running": True,
+        "bridge": BRIDGE_URL,
+        "session": BRIDGE_SESSION_TITLE
     }
 
 @app.get("/v1/models")
@@ -380,61 +351,54 @@ def _chat_request_instructions(request):
     return full_instructions, platform_marker
 
 
-def _run_api_turn(query, prompts, initial_user_content=None):
-    # The worker owns the lock even if the HTTP caller times out/disconnects.
-    # Only the per-turn input overlay is changed here; response collection and
-    # output cleanup below intentionally remain unchanged.
-    with api_lock:
-        agent = api_agent
-        if agent is None:
-            raise HTTPException(status_code=503, detail="Agent not initialized")
-        agent.task_queue.join()
-        # agentmain.run() assembles the real system prompt from this list
-        # immediately before each task.  Use this public GA input hook rather
-        # than backend.system, which MixinSession resets during preparation.
-        previous_extra_prompts = list(getattr(agent, "extra_sys_prompts", []) or [])
-        prompt_items = [str(p) for p in prompts if str(p).strip()]
-        if prompt_items:
-            agent.extra_sys_prompts = previous_extra_prompts + prompt_items
-        output = None
-        try:
-            output = agent.put_task(query=query, source="api", initial_user_content=initial_user_content)
-            full_response = ""
-            while True:
-                chunk = output.get()
-                if chunk is None:
-                    break
-                if isinstance(chunk, dict):
-                    if "done" in chunk:
-                        full_response = chunk["done"]
-                        break
-                    if "error" in chunk:
-                        raise HTTPException(status_code=500, detail=chunk["error"])
-                    # Intermediate events never become final text.
-                else:
-                    full_response += str(chunk)
-            return full_response
-        finally:
-            if output is not None:
-                agent.task_queue.join()
-            agent.extra_sys_prompts = previous_extra_prompts
-
-
-async def _execute_api_turn(query, messages, instructions=""):
-    if api_agent is None:
-        raise HTTPException(status_code=503, detail="Agent not initialized")
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    timestamped_query = f"[{timestamp}] {query}"
-    raw_content = next((m.content for m in reversed(messages)
-                        if m.role == "user"), query)
-    worker = asyncio.create_task(asyncio.to_thread(
-        _run_api_turn, timestamped_query, _request_prompts(messages, instructions), raw_content))
-    # Retrieve exceptions even after caller cancellation; do not cancel the worker.
-    worker.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
+def _bridge_json(method, path, payload=None, timeout=30):
+    data = None
+    headers = {"Content-Type": "application/json"}
+    if payload is not None:
+        data = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+    req = urllib.request.Request(BRIDGE_URL + path, data=data, headers=headers, method=method)
     try:
-        return await asyncio.wait_for(asyncio.shield(worker), timeout=300)
-    except asyncio.TimeoutError:
-        raise HTTPException(status_code=504, detail="Agent response timeout; task is still completing")
+        # Explicitly bypass system proxy for local loopback bridge communication
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=timeout) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        detail = exc.read().decode("utf-8", "replace")[:2000]
+        raise HTTPException(status_code=502, detail=f"desktop bridge HTTP {exc.code}: {detail}")
+    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        raise HTTPException(status_code=502, detail=f"desktop bridge unavailable: {exc}")
+
+
+def _bridge_messages(after=0):
+    return _bridge_json("GET", f"/session/{BRIDGE_SESSION_ID}/messages?after={after}&limit=200", timeout=30)
+
+
+def _run_api_turn(query, initial_user_content=None, attachments=None):
+    """Submit untouched content to desktop_bridge and return its native assistant text."""
+    with api_lock:
+        before = _bridge_messages(0)
+        baseline = int(before.get("msgSeq", 0) or 0)
+        body = {"prompt": initial_user_content if initial_user_content is not None else query}
+        # These are transport fields only. The desktop bridge/GA owns all decoding.
+        if attachments:
+            body.update(attachments)
+        _bridge_json("POST", f"/session/{BRIDGE_SESSION_ID}/prompt", body, timeout=60)
+        deadline = time.time() + 300
+        while time.time() < deadline:
+            time.sleep(0.5)
+            state = _bridge_messages(baseline)
+            for msg in state.get("messages", []):
+                if msg.get("role") == "assistant" and int(msg.get("id", 0) or 0) > baseline:
+                    content = msg.get("content", "")
+                    return _text_content(content) if not isinstance(content, str) else content
+            if state.get("status") in ("error", "failed"):
+                raise HTTPException(status_code=502, detail=state.get("lastError") or "desktop GA turn failed")
+        raise HTTPException(status_code=504, detail="desktop GA response timeout")
+
+
+async def _execute_api_turn(query, messages, instructions="", attachments=None):
+    raw_content = next((m.content for m in reversed(messages) if m.role == "user"), query)
+    return await asyncio.to_thread(_run_api_turn, query, raw_content, attachments)
 
 
 @app.post("/v1/responses")
@@ -451,7 +415,7 @@ async def responses(request: Request):
                 if not isinstance(item, dict) or item.get("type", "message") != "message":
                     raise ValueError("Only message input items are supported")
                 messages.append({"role": item.get("role", "user"),
-                                 "content": _text_content(item.get("content"))})
+                                 "content": item.get("content", "")})
         else:
             raise ValueError("input must be a string or message array")
         if not messages and isinstance(body.get("messages"), list):
@@ -461,7 +425,7 @@ async def responses(request: Request):
     except (ValueError, TypeError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     user_message = next((m.content for m in reversed(messages)
-                         if m.role == "user" and m.content.strip()), "")
+                         if m.role == "user" and _content_text(m.content).strip()), "")
     if not user_message:
         raise HTTPException(status_code=400, detail="No user input found")
     full_response = await _execute_api_turn(user_message, messages, instructions)
@@ -509,8 +473,7 @@ async def completions(request: Request):
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     """OpenAI 兼容的聊天接口"""
-    if not api_agent:
-        raise HTTPException(status_code=503, detail="Agent not initialized")
+
     
     # Debug: log raw request fields to diagnose platform instructions
     print(f"[ChatCompletions] Raw request fields:")
@@ -561,7 +524,7 @@ async def chat_completions(request: ChatCompletionRequest):
             user_message = msg.content
             break
     
-    if not user_message:
+    if not _content_text(user_message).strip():
         raise HTTPException(status_code=400, detail="No user message found")
     
     # Extract platform instructions and marker
@@ -575,14 +538,17 @@ async def chat_completions(request: ChatCompletionRequest):
             print(f"[ChatCompletions] Extracted platform marker: {platform_marker}")
     else:
         print(f"[ChatCompletions] No platform instructions received")
-    
     # Inject platform marker into user message (like timestamp)
     if platform_marker:
         user_message = f"{platform_marker} {user_message}"
         print(f"[ChatCompletions] Injected platform marker into user message")
     
+    attachments = {k: v for k, v in {
+        "files": request.files, "imageMetas": request.imageMetas, "images": request.images
+    }.items() if v}
     full_response = await _execute_api_turn(user_message, request.messages,
-                                             instructions=platform_instructions)
+                                             instructions=platform_instructions,
+                                             attachments=attachments)
 
     # 返回 OpenAI 格式响应
     return {
