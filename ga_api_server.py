@@ -386,8 +386,11 @@ def _run_api_turn(query, prompts):
 async def _execute_api_turn(query, messages, instructions=""):
     if api_agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
+    # Inject timestamp into user message for temporal context
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamped_query = f"[{timestamp}] {query}"
     worker = asyncio.create_task(asyncio.to_thread(
-        _run_api_turn, query, _request_prompts(messages, instructions)))
+        _run_api_turn, timestamped_query, _request_prompts(messages, instructions)))
     # Retrieve exceptions even after caller cancellation; do not cancel the worker.
     worker.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
     try:
