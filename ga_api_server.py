@@ -90,7 +90,7 @@ if CONFIG["auth"]["require_auth"]:
 # ==================== Pydantic Models ====================
 
 def _text_content(value):
-    """Normalize standard text content; never stringify unsupported blocks."""
+    """Extract text only for fields that semantically require text (logs/prompts)."""
     if value is None:
         return ""
     if isinstance(value, str):
@@ -98,23 +98,33 @@ def _text_content(value):
     if isinstance(value, list):
         parts = []
         for part in value:
-            if (not isinstance(part, dict) or
-                    part.get("type") not in ("text", "input_text", "output_text") or
-                    not isinstance(part.get("text"), str)):
-                raise ValueError("Only text content blocks are supported by this endpoint")
-            parts.append(part["text"])
+            if not isinstance(part, dict):
+                continue
+            if part.get("type") in ("text", "input_text", "output_text"):
+                text = part.get("text")
+                if isinstance(text, str):
+                    parts.append(text)
         return "\n".join(parts)
-    raise ValueError("content must be a string, text block array, or null")
+    return ""
+
+
+def _content_text(value):
+    """Text used for queue display/safety checks without altering attachment blocks."""
+    return _text_content(value) if not isinstance(value, str) else value
+
+
+def _with_prefix(content, prefix):
+    """Prefix multimodal content with a text block; preserve every original block."""
+    if isinstance(content, list):
+        return [{"type": "text", "text": prefix}] + content
+    return f"{prefix} {content}" if content else prefix
 
 
 class Message(BaseModel):
     role: str
-    content: str = ""
-
-    @field_validator("content", mode="before")
-    @classmethod
-    def normalize_content(cls, value):
-        return _text_content(value)
+    # Preserve OpenAI/Responses multimodal blocks verbatim.  The API is only
+    # a transport layer; GA's native client decides how to handle attachments.
+    content: Any = ""
 
 class ChatCompletionRequest(BaseModel):
     model: str
@@ -154,7 +164,7 @@ def is_dangerous_request(messages: List[Message]) -> Optional[str]:
     user_msg = ""
     for msg in reversed(messages):
         if msg.role == "user":
-            user_msg = msg.content.lower()
+            user_msg = _text_content(msg.content).lower()
             break
     
     if not user_msg:
@@ -186,7 +196,7 @@ def check_confirmation_token(messages: List[Message]) -> bool:
     user_msg = ""
     for msg in reversed(messages):
         if msg.role == "user":
-            user_msg = msg.content
+            user_msg = _text_content(msg.content)
             break
     
     # 查找令牌
@@ -370,7 +380,7 @@ def _chat_request_instructions(request):
     return full_instructions, platform_marker
 
 
-def _run_api_turn(query, prompts):
+def _run_api_turn(query, prompts, initial_user_content=None):
     # The worker owns the lock even if the HTTP caller times out/disconnects.
     # Only the per-turn input overlay is changed here; response collection and
     # output cleanup below intentionally remain unchanged.
@@ -388,7 +398,7 @@ def _run_api_turn(query, prompts):
             agent.extra_sys_prompts = previous_extra_prompts + prompt_items
         output = None
         try:
-            output = agent.put_task(query=query, source="api")
+            output = agent.put_task(query=query, source="api", initial_user_content=initial_user_content)
             full_response = ""
             while True:
                 chunk = output.get()
@@ -413,11 +423,12 @@ def _run_api_turn(query, prompts):
 async def _execute_api_turn(query, messages, instructions=""):
     if api_agent is None:
         raise HTTPException(status_code=503, detail="Agent not initialized")
-    # Inject timestamp into user message for temporal context
     timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     timestamped_query = f"[{timestamp}] {query}"
+    raw_content = next((m.content for m in reversed(messages)
+                        if m.role == "user"), query)
     worker = asyncio.create_task(asyncio.to_thread(
-        _run_api_turn, timestamped_query, _request_prompts(messages, instructions)))
+        _run_api_turn, timestamped_query, _request_prompts(messages, instructions), raw_content))
     # Retrieve exceptions even after caller cancellation; do not cancel the worker.
     worker.add_done_callback(lambda task: task.exception() if not task.cancelled() else None)
     try:
