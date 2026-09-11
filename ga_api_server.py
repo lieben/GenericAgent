@@ -412,8 +412,8 @@ def _run_api_turn(query, initial_user_content=None, attachments=None):
 
 
 async def _execute_api_turn(query, messages, instructions="", attachments=None):
-    raw_content = next((m.content for m in reversed(messages) if m.role == "user"), query)
-    return await asyncio.to_thread(_run_api_turn, query, raw_content, attachments)
+    # Use query directly (already timestamped + platform marker injected by chat_completions)
+    return await asyncio.to_thread(_run_api_turn, query, None, attachments)
 
 
 @app.post("/v1/responses")
