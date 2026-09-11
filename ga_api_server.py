@@ -149,7 +149,7 @@ class ChatCompletionResponse(BaseModel):
 
 # API is a transport-only facade over the already-running desktop bridge.
 BRIDGE_URL = os.environ.get("GA_DESKTOP_BRIDGE_URL", "http://127.0.0.1:14168")
-BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-53138a368967")
+BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-21095169c222")
 BRIDGE_SESSION_TITLE = "Xavier-chat"
 api_agent = None
 api_agent_thread = None
@@ -351,7 +351,7 @@ def _chat_request_instructions(request):
     return full_instructions, platform_marker
 
 
-def _bridge_json(method, path, payload=None, timeout=30):
+def _bridge_json(method, path, payload=None, timeout=30, allow_500=False):
     data = None
     headers = {"Content-Type": "application/json"}
     if payload is not None:
@@ -363,6 +363,11 @@ def _bridge_json(method, path, payload=None, timeout=30):
         with opener.open(req, timeout=timeout) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
+        # Bridge returns 500 when BrokenPipeError occurs on stderr logging,
+        # but the turn itself will complete. Allow caller to handle this gracefully.
+        if exc.code == 500 and allow_500:
+            print(f"[API] Bridge returned 500 (likely BrokenPipeError), caller will poll for reply...")
+            return None
         detail = exc.read().decode("utf-8", "replace")[:2000]
         raise HTTPException(status_code=502, detail=f"desktop bridge HTTP {exc.code}: {detail}")
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
@@ -382,7 +387,17 @@ def _run_api_turn(query, initial_user_content=None, attachments=None):
         # These are transport fields only. The desktop bridge/GA owns all decoding.
         if attachments:
             body.update(attachments)
-        _bridge_json("POST", f"/session/{BRIDGE_SESSION_ID}/prompt", body, timeout=60)
+        
+        # Try to submit prompt; if bridge returns 500 (BrokenPipeError from stderr),
+        # don't fail immediately — the turn itself will complete, we just poll for the reply.
+        try:
+            _bridge_json("POST", f"/session/{BRIDGE_SESSION_ID}/prompt", body, timeout=60)
+        except HTTPException as exc:
+            if exc.status_code == 502 and "HTTP 500" in str(exc.detail):
+                print(f"[API] Bridge returned 500 (likely BrokenPipeError), continuing to poll for reply...")
+            else:
+                raise
+        
         deadline = time.time() + 300
         while time.time() < deadline:
             time.sleep(0.5)
@@ -538,15 +553,29 @@ async def chat_completions(request: ChatCompletionRequest):
             print(f"[ChatCompletions] Extracted platform marker: {platform_marker}")
     else:
         print(f"[ChatCompletions] No platform instructions received")
-    # Inject platform marker into user message (like timestamp)
+    
+    # Inject timestamp for temporal context
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    timestamped_message = f"[{timestamp}]"
+    
+    # Inject platform marker (like 【.微信平台跨次元对话.】)
     if platform_marker:
-        user_message = f"{platform_marker} {user_message}"
-        print(f"[ChatCompletions] Injected platform marker into user message")
+        timestamped_message += f" {platform_marker}"
+        print(f"[ChatCompletions] Injected platform marker: {platform_marker}")
+    
+    timestamped_message += f" {user_message}"
+    print(f"[ChatCompletions] Final user message: {timestamped_message[:100]}...")
     
     attachments = {k: v for k, v in {
         "files": request.files, "imageMetas": request.imageMetas, "images": request.images
     }.items() if v}
-    full_response = await _execute_api_turn(user_message, request.messages,
+    
+    # Add platform_instructions as 'display' field for GA to parse
+    if platform_instructions:
+        attachments["display"] = platform_instructions
+        print(f"[ChatCompletions] Passing platform_instructions as display field to bridge")
+    
+    full_response = await _execute_api_turn(timestamped_message, request.messages,
                                              instructions=platform_instructions,
                                              attachments=attachments)
 
