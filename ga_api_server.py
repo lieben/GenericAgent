@@ -149,7 +149,7 @@ class ChatCompletionResponse(BaseModel):
 
 # API is a transport-only facade over the already-running desktop bridge.
 BRIDGE_URL = os.environ.get("GA_DESKTOP_BRIDGE_URL", "http://127.0.0.1:14168")
-BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-21095169c222")
+BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-53138a368967")
 BRIDGE_SESSION_TITLE = "Xavier-chat"
 api_agent = None
 api_agent_thread = None
