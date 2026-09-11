@@ -334,14 +334,40 @@ def _request_prompts(messages, instructions=""):
     return prompts
 
 
+def _extract_platform_marker(text):
+    """Extract platform marker like 【.微信平台跨次元对话.】 from text."""
+    import re
+    match = re.search(r'【\.[^】]+\.】', text)
+    return match.group(0) if match else None
+
+
 def _chat_request_instructions(request):
-    """Collect only non-message instruction fields; messages are handled once."""
+    """Collect platform instructions from both top-level fields and messages array.
+    Returns (full_instructions, platform_marker)."""
     values = []
+    platform_marker = None
+    
+    # 1. Extract from top-level fields (OpenAI standard)
     for value in (request.instructions, request.system, request.developer):
         text = _text_content(value)
         if text.strip():
             values.append(text)
-    return "\n".join(values)
+            if not platform_marker:
+                platform_marker = _extract_platform_marker(text)
+    
+    # 2. Extract from messages array (Chatbox style: first system message)
+    if request.messages:
+        for msg in request.messages:
+            if msg.role == "system":
+                text = _text_content(msg.content)
+                if text.strip():
+                    values.append(text)
+                    if not platform_marker:
+                        platform_marker = _extract_platform_marker(text)
+                break  # Only take the first system message
+    
+    full_instructions = "\n".join(values)
+    return full_instructions, platform_marker
 
 
 def _run_api_turn(query, prompts):
@@ -475,6 +501,18 @@ async def chat_completions(request: ChatCompletionRequest):
     if not api_agent:
         raise HTTPException(status_code=503, detail="Agent not initialized")
     
+    # Debug: log raw request fields to diagnose platform instructions
+    print(f"[ChatCompletions] Raw request fields:")
+    print(f"  - instructions: {getattr(request, 'instructions', None)}")
+    print(f"  - system: {getattr(request, 'system', None)}")
+    print(f"  - developer: {getattr(request, 'developer', None)}")
+    print(f"  - messages count: {len(request.messages) if request.messages else 0}")
+    if request.messages:
+        for i, msg in enumerate(request.messages[:3]):  # Show first 3 messages
+            content_preview = msg.content[:200] if len(msg.content) > 200 else msg.content
+            print(f"    [{i}] role={msg.role}, content_length={len(msg.content)}")
+            print(f"        content: {content_preview}")
+    
     # 检查是否包含确认令牌
     has_confirmation = check_confirmation_token(request.messages)
     
@@ -515,8 +553,25 @@ async def chat_completions(request: ChatCompletionRequest):
     if not user_message:
         raise HTTPException(status_code=400, detail="No user message found")
     
+    # Extract platform instructions and marker
+    platform_instructions, platform_marker = _chat_request_instructions(request)
+    if platform_instructions:
+        print(f"[ChatCompletions] Platform instructions ({len(platform_instructions)}ch):")
+        print(f"--- BEGIN FULL CONTENT ---")
+        print(platform_instructions)
+        print(f"--- END FULL CONTENT ---")
+        if platform_marker:
+            print(f"[ChatCompletions] Extracted platform marker: {platform_marker}")
+    else:
+        print(f"[ChatCompletions] No platform instructions received")
+    
+    # Inject platform marker into user message (like timestamp)
+    if platform_marker:
+        user_message = f"{platform_marker} {user_message}"
+        print(f"[ChatCompletions] Injected platform marker into user message")
+    
     full_response = await _execute_api_turn(user_message, request.messages,
-                                             instructions=_chat_request_instructions(request))
+                                             instructions=platform_instructions)
 
     # 返回 OpenAI 格式响应
     return {
