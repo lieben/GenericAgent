@@ -388,6 +388,11 @@ def _run_api_turn(query, initial_user_content=None, attachments=None):
         if attachments:
             body.update(attachments)
         
+        # DEBUG: 打印实际发送的内容
+        print(f"[_run_api_turn] DEBUG prompt content (first 150 chars): {body['prompt'][:150]}")
+        if 'display' in body:
+            print(f"[_run_api_turn] DEBUG display field (first 100 chars): {body['display'][:100]}")
+        
         # Try to submit prompt; if bridge returns 500 (BrokenPipeError from stderr),
         # don't fail immediately — the turn itself will complete, we just poll for the reply.
         try:
