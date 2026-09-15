@@ -417,8 +417,27 @@ def _run_api_turn(query, initial_user_content=None, attachments=None):
 
 
 async def _execute_api_turn(query, messages, instructions="", attachments=None):
-    # Use query directly (already timestamped + platform marker injected by chat_completions)
-    return await asyncio.to_thread(_run_api_turn, query, None, attachments)
+    """Send this turn to desktop GA.
+
+    Platform instructions must go into the agent-facing prompt. The desktop
+    bridge treats `display` as UI-only bubble text and never feeds it to the
+    model — that is why stuffing PR into display previously did nothing.
+    """
+    attachments = dict(attachments or {})
+    instruction_text = _text_content(instructions).strip()
+    agent_prompt = query
+    if instruction_text:
+        agent_prompt = (
+            "【第三方平台指令，仅本轮有效】\n"
+            f"{instruction_text}\n"
+            "【用户消息】\n"
+            f"{query}"
+        )
+        # Keep the Xavier-chat bubble as the user-facing text, never the PR body.
+        if not str(attachments.get("display") or "").strip():
+            attachments["display"] = query
+        print(f"[_execute_api_turn] Injected platform instructions ({len(instruction_text)}ch) into agent prompt")
+    return await asyncio.to_thread(_run_api_turn, agent_prompt, None, attachments)
 
 
 @app.post("/v1/responses")
@@ -575,11 +594,8 @@ async def chat_completions(request: ChatCompletionRequest):
         "files": request.files, "imageMetas": request.imageMetas, "images": request.images
     }.items() if v}
     
-    # Add platform_instructions as 'display' field for GA to parse
-    if platform_instructions:
-        attachments["display"] = platform_instructions
-        print(f"[ChatCompletions] Passing platform_instructions as display field to bridge")
-    
+    # PR is prepended to the agent prompt in _execute_api_turn.
+    # Do not put it in display — that field is UI-only and never reaches the model.
     full_response = await _execute_api_turn(timestamped_message, request.messages,
                                              instructions=platform_instructions,
                                              attachments=attachments)
