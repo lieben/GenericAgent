@@ -1,0 +1,43 @@
+{
+  "groups": {
+    "45132052024@chatroom": "正常人类聚集地",
+    "45267340890@chatroom": "遵命饲养官"
+  },
+  "triggers": [
+    "沈星回",
+    "星星",
+    "xavier"
+  ],
+  "trigger_group_nickname": true,
+  "poll_quiet_seconds": 120,
+  "poll_active_seconds": 15,
+  "special_active_seconds": 300,
+  "quiet_after_no_count": 3,
+  "context_window": 30,
+  "self_wxids": [
+    "wxid_74asycejpqvf22"
+  ],
+  "special_accounts": [
+    "yummyit"
+  ],
+  "weflow": {
+    "url": "http://127.0.0.1:5031/api/v1",
+    "token": "local-58G8yHg9dW2PLHzgHuBQetX2-DW0g7JQnTEhAlWZ3tA"
+  },
+  "flash": {
+    "base_url": "http://192.168.1.126:18089",
+    "api_key": "sk-octopus-s6jsFLOgS4devrdctli2HVjCLmNgemQlki5Jw4dKrGMvoV9G",
+    "api_key_env": "FLASH_API_KEY",
+    "model": "gemini-3-flash-preview"
+  },
+  "xavier": {
+    "base_url": "http://127.0.0.1:1016",
+    "api_key": "sk-wxxxx",
+    "api_key_env": "XAVIER_API_KEY",
+    "model": "xavier-gemini-pro"
+  },
+  "send": {
+    "input_x": 821,
+    "input_y": 760
+  }
+}
