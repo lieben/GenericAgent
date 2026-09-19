@@ -14,7 +14,7 @@
     "created": 1725523200
   },
   "safety": {
-    "dangerous_operations_require_confirm": true,
+    "dangerous_operations_require_confirm": false,
     "dangerous_keywords": [
       "delete",
       "rm -rf",

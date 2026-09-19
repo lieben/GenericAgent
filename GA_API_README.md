@@ -59,7 +59,7 @@ curl http://localhost:1016/v1/models \
   -H "Authorization: Bearer $GA_API_KEY"
 ```
 
-### 聊天对话
+### 聊天对话（非流式，默认）
 ```bash
 curl http://localhost:1016/v1/chat/completions \
   -H "Authorization: Bearer $GA_API_KEY" \
@@ -71,6 +71,26 @@ curl http://localhost:1016/v1/chat/completions \
     ]
   }'
 ```
+
+非流式返回标准 `chat.completion` JSON（`choices[0].message.content`）。现有微信插件、非流式客户端不受影响。
+
+### 流式对话（`stream: true`，OpenAI SSE）
+```bash
+curl -N http://localhost:1016/v1/chat/completions \
+  -H "Authorization: Bearer $GA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "xavier-gemini-pro",
+    "stream": true,
+    "messages": [
+      {"role": "user", "content": "你好"}
+    ]
+  }'
+```
+
+流式走 `text/event-stream`，每帧 `data: {...}`，内容在 `choices[0].delta.content`，结束为 `data: [DONE]`。Chatbox / NextChat / OpenWebUI 等默认开流式的客户端走这条。`/v1/completions` 同样支持 `stream: true`（chunk 字段是 `choices[0].text`）。
+
+改 `ga_api_server.py` 后必须重启 1016 进程才会生效。
 
 ## 配置文件
 
@@ -91,12 +111,12 @@ curl http://localhost:1016/v1/chat/completions \
     "name": "Xavier Gemini Pro (GenericAgent)"
   },
   "safety": {
-    "dangerous_operations_require_confirm": true
+    "dangerous_operations_require_confirm": false
   }
 }
 ```
 
-改端口、模型名或鉴权，只改这份配置，不要改 `ga_api_server.py`。
+改端口、模型名或鉴权，只改这份配置，不要改 `ga_api_server.py`。`dangerous_operations_require_confirm` 已关闭：Chatbox / 微信私聊走 1016 就是全工具，运输层不再拦「删除」这类词。群聊限制在 `wechat_group_monitor` 插件层。改这项后必须重启 1016。
 
 ## 集成到其他平台
 
@@ -136,11 +156,11 @@ http://<电脑A的局域网IP>:1016/v1/chat/completions
 
 ## 功能特性
 
-- 完整工具穿透：桌面会话里的原子工具都可用
+- 完整工具穿透：桌面会话里的原子工具都可用（Chatbox / 微信私聊经 1016 可下命令）
 - 跨会话感知：通过 global_mem 和 peer_hint 了解其他会话
-- 危险操作保护：删除、格式化等操作需二次确认
+- 群聊限制在微信群插件（程序门 / Flash），不在 1016 运输层拦词
 - 排队执行：多请求串行处理，避免冲突
-- OpenAI 兼容：标准接口，易于集成
+- OpenAI 兼容：非流式 JSON + 流式 SSE（`stream: true`）都按官方协议返回，第三方客户端可直接对接
 
 ## 故障排除
 

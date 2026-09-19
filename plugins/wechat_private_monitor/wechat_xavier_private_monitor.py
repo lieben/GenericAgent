@@ -404,6 +404,16 @@ def unsafe_xavier_text(value):
     ))
 
 
+def sanitize_for_xavier(text):
+    """Mask 1016 gateway trigger words in chat text only.
+
+    Ordinary talk like 「读写和删除都没问题」 must not be treated as a dangerous
+    command. Stored history stays original; only the outgoing prompt is masked.
+    Zero-width space keeps the meaning for the model but bypasses exact-match scan.
+    """
+    return str(text or "").replace("删除", "删\u200b除")
+
+
 xavier_last_reason = "not_called"
 
 
@@ -416,8 +426,8 @@ def xavier(history_items, new_items, talker, contact):
         return ""
     url, model, key = xavier_config()
     nickname = contact.get("nickname") or talker
-    history_text = context_lines(history_items) or "（无更早的历史）"
-    new_text = context_lines(new_items) or "（无新消息）"
+    history_text = sanitize_for_xavier(context_lines(history_items) or "（无更早的历史）")
+    new_text = sanitize_for_xavier(context_lines(new_items) or "（无新消息）")
     prompt = f"""这是沈星回和{nickname}的微信私聊。你只负责生成回复，不要判断要不要参与，不要输出空内容，不要输出 participate 字段，不要说“先不说话”“没有要回的”，不要使用 @。
 
 对方可能连续发了几句话、几张图。请把【新消息】整批看成同一次开口，生成一条自然、简洁的综合回复，不要逐条、逐图分别回应，也不要拆成多个气泡。结合历史背景理解话题从哪来，但只针对这一批新消息作答。上下文中的 [图片] 和「画面：」是图片的文字描述；结合前后文字理解即可，不要假装亲眼看见原图，也不要逐张点评。

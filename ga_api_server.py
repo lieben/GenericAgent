@@ -287,6 +287,102 @@ async def list_models():
         ]
     }
 
+def _sse_data(payload) -> str:
+    """Serialize one OpenAI SSE frame. payload=None emits the terminal [DONE]."""
+    if payload is None:
+        return "data: [DONE]\n\n"
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _openai_chat_chunk(chat_id: str, created: int, model: str, delta: Dict[str, Any],
+                       finish_reason: Optional[str] = None) -> Dict[str, Any]:
+    return {
+        "id": chat_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "delta": delta,
+            "finish_reason": finish_reason,
+        }],
+    }
+
+
+def _openai_chat_completion(chat_id: str, created: int, model: str, content: str,
+                            finish_reason: str = "stop") -> Dict[str, Any]:
+    return {
+        "id": chat_id,
+        "object": "chat.completion",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "message": {
+                "role": "assistant",
+                "content": content,
+            },
+            "finish_reason": finish_reason,
+        }],
+        "usage": {
+            "prompt_tokens": 0,
+            "completion_tokens": 0,
+            "total_tokens": 0,
+        },
+    }
+
+
+def _iter_content_chunks(text: str, size: int = 24):
+    """Split cleaned text into small SSE deltas so clients can render incrementally."""
+    if not text:
+        yield ""
+        return
+    for i in range(0, len(text), size):
+        yield text[i:i + size]
+
+
+async def _sse_chat_stream(chat_id: str, created: int, model: str, content: str):
+    """Standard OpenAI chat.completion.chunk SSE: role → content deltas → stop → [DONE]."""
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"role": "assistant", "content": ""}))
+    for piece in _iter_content_chunks(content):
+        if piece:
+            yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"content": piece}))
+            await asyncio.sleep(0)
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {}, finish_reason="stop"))
+    yield _sse_data(None)
+
+
+async def _sse_text_completion_stream(cmpl_id: str, created: int, model: str, text: str):
+    """Standard OpenAI text_completion SSE: text deltas → stop → [DONE]."""
+    for piece in _iter_content_chunks(text):
+        if piece:
+            yield _sse_data({
+                "id": cmpl_id,
+                "object": "text_completion",
+                "created": created,
+                "model": model,
+                "choices": [{"text": piece, "index": 0, "logprobs": None, "finish_reason": None}],
+            })
+            await asyncio.sleep(0)
+    yield _sse_data({
+        "id": cmpl_id,
+        "object": "text_completion",
+        "created": created,
+        "model": model,
+        "choices": [{"text": "", "index": 0, "logprobs": None, "finish_reason": "stop"}],
+    })
+    yield _sse_data(None)
+
+
+def _sse_headers() -> Dict[str, str]:
+    # Disable proxy/nginx buffering so third-party clients see chunks immediately.
+    return {
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
+
+
 def _clean_api_response(text: str) -> str:
     """API 对外只返回桌面端当前可见的最后一轮正文，不暴露工具过程/摘要。"""
     value = strip_final_info_marker(text)
@@ -499,11 +595,19 @@ async def completions(request: Request):
     full_response = await _execute_api_turn(prompt, messages, instructions=instructions)
     text = _clean_api_response(full_response)
     created = int(time.time())
+    cmpl_id = f"cmpl-{created}"
+    model = body.get("model", CONFIG["model"]["id"])
+    if body.get("stream"):
+        return StreamingResponse(
+            _sse_text_completion_stream(cmpl_id, created, model, text),
+            media_type="text/event-stream",
+            headers=_sse_headers(),
+        )
     return {
-        "id": f"cmpl-{created}",
+        "id": cmpl_id,
         "object": "text_completion",
         "created": created,
-        "model": body.get("model", CONFIG["model"]["id"]),
+        "model": model,
         "choices": [{"text": text, "index": 0, "logprobs": None, "finish_reason": "stop"}],
         "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
     }
@@ -534,26 +638,24 @@ async def chat_completions(request: ChatCompletionRequest):
         dangerous_keyword = is_dangerous_request(request.messages)
         if dangerous_keyword:
             token = generate_confirmation_token(request.messages)
+            warn_text = (
+                f"⚠️  检测到危险操作关键词：「{dangerous_keyword}」\n\n"
+                f"为了安全，需要你确认是否真的要执行这个操作。\n\n"
+                f"如果确认，请在下一条消息中包含以下令牌：\n\n"
+                f"`{token}`\n\n"
+                f"令牌有效期 5 分钟。"
+            )
+            created = int(time.time())
+            chat_id = f"chatcmpl-danger-{created}"
+            if request.stream:
+                return StreamingResponse(
+                    _sse_chat_stream(chat_id, created, request.model, warn_text),
+                    media_type="text/event-stream",
+                    headers=_sse_headers(),
+                )
             return JSONResponse(
                 status_code=200,
-                content={
-                    "id": f"chatcmpl-danger-{int(time.time())}",
-                    "object": "chat.completion",
-                    "created": int(time.time()),
-                    "model": request.model,
-                    "choices": [{
-                        "index": 0,
-                        "message": {
-                            "role": "assistant",
-                            "content": f"⚠️  检测到危险操作关键词：「{dangerous_keyword}」\n\n"
-                                     f"为了安全，需要你确认是否真的要执行这个操作。\n\n"
-                                     f"如果确认，请在下一条消息中包含以下令牌：\n\n"
-                                     f"`{token}`\n\n"
-                                     f"令牌有效期 5 分钟。"
-                        },
-                        "finish_reason": "stop"
-                    }]
-                }
+                content=_openai_chat_completion(chat_id, created, request.model, warn_text),
             )
     
     # 获取用户消息
@@ -600,26 +702,17 @@ async def chat_completions(request: ChatCompletionRequest):
                                              instructions=platform_instructions,
                                              attachments=attachments)
 
-    # 返回 OpenAI 格式响应
-    return {
-        "id": f"chatcmpl-{int(time.time())}",
-        "object": "chat.completion",
-        "created": int(time.time()),
-        "model": request.model,
-        "choices": [{
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": _clean_api_response(full_response)
-            },
-            "finish_reason": "stop"
-        }],
-        "usage": {
-            "prompt_tokens": 0,  # 暂不统计
-            "completion_tokens": 0,
-            "total_tokens": 0
-        }
-    }
+    content = _clean_api_response(full_response)
+    created = int(time.time())
+    chat_id = f"chatcmpl-{created}"
+    if request.stream:
+        return StreamingResponse(
+            _sse_chat_stream(chat_id, created, request.model, content),
+            media_type="text/event-stream",
+            headers=_sse_headers(),
+        )
+    # 非流式：保持原 OpenAI chat.completion JSON，第三方现有对接不受影响
+    return _openai_chat_completion(chat_id, created, request.model, content)
 
 # ==================== 主程序 ====================
 
