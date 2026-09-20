@@ -1,0 +1,1259 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_status",
+      "description": "Palace overview — total drawers, wing and room counts",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_list_wings",
+      "description": "List all wings with drawer counts",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_list_rooms",
+      "description": "List rooms within a wing (or all rooms if no wing given)",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Wing to list rooms for (optional)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_get_taxonomy",
+      "description": "Full taxonomy: wing → room → drawer count",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_get_aaak_spec",
+      "description": "Get the AAAK dialect specification — the compressed memory format MemPalace uses. Call this if you need to read or write AAAK-compressed memories.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_query",
+      "description": "Query the knowledge graph for an entity's relationships. Returns typed facts with temporal validity. E.g. 'Max' → child_of Alice, loves chess, does swimming. Filter by date with as_of to see what was true at a point in time.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity to query (e.g. 'Max', 'MyProject', 'Alice')"
+          },
+          "as_of": {
+            "type": "string",
+            "description": "Date/datetime filter — only facts valid at this time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional)"
+          },
+          "direction": {
+            "type": "string",
+            "description": "outgoing (entity→?), incoming (?→entity), or both (default: both)"
+          }
+        },
+        "required": [
+          "entity"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_add",
+      "description": "Add a fact to the knowledge graph. Subject → predicate → object with optional time window. E.g. ('Max', 'started_school', 'Year 7', valid_from='2026-09-01'). Pass valid_to to backfill an already-ended historical fact in a single call.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "The entity doing/being something"
+          },
+          "predicate": {
+            "type": "string",
+            "description": "The relationship type (e.g. 'loves', 'works_on', 'daughter_of')"
+          },
+          "object": {
+            "type": "string",
+            "description": "The entity being connected to"
+          },
+          "valid_from": {
+            "type": "string",
+            "description": "When this became true (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional)"
+          },
+          "valid_to": {
+            "type": "string",
+            "description": "When this stopped being true (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional). Use for backfilling already-ended historical facts."
+          },
+          "source_closet": {
+            "type": "string",
+            "description": "Closet ID where this fact appears (optional)"
+          },
+          "source_file": {
+            "type": "string",
+            "description": "Source file path the fact was extracted from (optional)"
+          },
+          "source_drawer_id": {
+            "type": "string",
+            "description": "Drawer ID the fact was extracted from (optional, RFC 002 provenance)"
+          }
+        },
+        "required": [
+          "subject",
+          "predicate",
+          "object"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_invalidate",
+      "description": "Mark a fact as no longer true. E.g. ankle injury resolved, job ended, moved house.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "Entity"
+          },
+          "predicate": {
+            "type": "string",
+            "description": "Relationship"
+          },
+          "object": {
+            "type": "string",
+            "description": "Connected entity"
+          },
+          "ended": {
+            "type": "string",
+            "description": "When it stopped being true (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, default: today)"
+          }
+        },
+        "required": [
+          "subject",
+          "predicate",
+          "object"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_supersede",
+      "description": "Atomically replace a fact with its successor at a shared boundary. Use when a single-valued fact changes (model, employer, address) instead of separate kg_invalidate + kg_add — a point-in-time query at the boundary then returns only the new value.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string",
+            "description": "The entity whose fact is changing"
+          },
+          "predicate": {
+            "type": "string",
+            "description": "The relationship type (e.g. 'uses_model', 'works_at')"
+          },
+          "old_object": {
+            "type": "string",
+            "description": "The value being replaced"
+          },
+          "new_object": {
+            "type": "string",
+            "description": "The new value"
+          },
+          "at": {
+            "type": "string",
+            "description": "Boundary instant (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional; defaults to now UTC)"
+          }
+        },
+        "required": [
+          "subject",
+          "predicate",
+          "old_object",
+          "new_object"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_timeline",
+      "description": "Chronological timeline of facts. Shows the story of an entity (or everything) in order.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entity": {
+            "type": "string",
+            "description": "Entity to get timeline for (optional — omit for full timeline)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_kg_stats",
+      "description": "Knowledge graph overview: entities, triples, current vs expired facts, relationship types.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_traverse",
+      "description": "Walk the palace graph from a room. Shows connected ideas across wings — the tunnels. Like following a thread through the palace: start at 'chromadb-setup' in wing_code, discover it connects to wing_myproject (planning) and wing_user (feelings about it).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "start_room": {
+            "type": "string",
+            "description": "Room to start from (e.g. 'chromadb-setup', 'riley-school')"
+          },
+          "max_hops": {
+            "type": "integer",
+            "description": "How many connections to follow (default: 2)"
+          }
+        },
+        "required": [
+          "start_room"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_find_tunnels",
+      "description": "Find rooms that bridge two wings — the hallways connecting different domains. E.g. what topics connect wing_code to wing_team?",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing_a": {
+            "type": "string",
+            "description": "First wing (optional)"
+          },
+          "wing_b": {
+            "type": "string",
+            "description": "Second wing (optional)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_graph_stats",
+      "description": "Palace graph overview: total rooms, tunnel connections, edges between wings.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_mesh_peers",
+      "description": "Mesh estate snapshot (RFC 004): this replica's identity, version vector and node profile; each configured peer's reachability, last sync outcome, remote version vector and advertised profile; origins known only transitively; and origin_profiles keyed by replica_id. Exactly the GET /sync/peers payload — tokens are never included.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_create_tunnel",
+      "description": "Create a cross-wing tunnel linking two palace locations. Use when content in one project relates to another — e.g., an API design in project_api connects to a database schema in project_database.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "source_wing": {
+            "type": "string",
+            "description": "Wing of the source"
+          },
+          "source_room": {
+            "type": "string",
+            "description": "Room in the source wing"
+          },
+          "target_wing": {
+            "type": "string",
+            "description": "Wing of the target"
+          },
+          "target_room": {
+            "type": "string",
+            "description": "Room in the target wing"
+          },
+          "label": {
+            "type": "string",
+            "description": "Description of the connection"
+          },
+          "source_drawer_id": {
+            "type": "string",
+            "description": "Optional specific drawer ID"
+          },
+          "target_drawer_id": {
+            "type": "string",
+            "description": "Optional specific drawer ID"
+          }
+        },
+        "required": [
+          "source_wing",
+          "source_room",
+          "target_wing",
+          "target_room"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_list_tunnels",
+      "description": "List all explicit cross-wing tunnels. Optionally filter by wing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Filter tunnels by wing (shows tunnels where wing is source or target)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_delete_tunnel",
+      "description": "Delete an explicit tunnel by its ID.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "tunnel_id": {
+            "type": "string",
+            "description": "Tunnel ID to delete"
+          }
+        },
+        "required": [
+          "tunnel_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_list_hallways",
+      "description": "List within-wing hallway records (entity-to-entity co-occurrence links built at mine time). Optionally filter by wing.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Filter hallways by wing"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_delete_hallway",
+      "description": "Delete a hallway record by its ID. Returns {deleted: bool}.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "hallway_id": {
+            "type": "string",
+            "description": "Hallway ID to delete"
+          }
+        },
+        "required": [
+          "hallway_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_follow_tunnels",
+      "description": "Follow tunnels from a room to see what it connects to in other wings. Returns connected rooms with drawer previews.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Wing to start from"
+          },
+          "room": {
+            "type": "string",
+            "description": "Room to follow tunnels from"
+          }
+        },
+        "required": [
+          "wing",
+          "room"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_search",
+      "description": "Semantic search. Returns verbatim drawer content with similarity scores. IMPORTANT: 'query' must contain ONLY search keywords. Use 'context' for background. Results with cosine distance > max_distance are filtered out.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Short search query ONLY — keywords or a question. Max 250 chars.",
+            "maxLength": 250
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max results (default 5)",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "wing": {
+            "type": "string",
+            "description": "Filter by wing (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "source_file": {
+            "type": "string",
+            "description": "Filter to one exact source_file (optional). Matches the full stored path exactly (leading/trailing whitespace trimmed); no glob or basename matching. Pass the value from a result's 'source_path' field; the displayed 'source_file' is only a basename."
+          },
+          "since": {
+            "type": "string",
+            "description": "Only drawers filed on/after this ISO date or datetime (inclusive), e.g. '2026-04-01' or '2026-04-01T09:30:00'. Compares the drawer's created_at (filed_at) wall-clock; drawers without a filed_at are excluded while set."
+          },
+          "before": {
+            "type": "string",
+            "description": "Only drawers filed strictly before this ISO date or datetime (exclusive). Same comparison rules as 'since'."
+          },
+          "max_distance": {
+            "type": "number",
+            "description": "Max cosine distance threshold (0=identical, 2=opposite). Results further than this are dropped. Lower = stricter. Default 1.5. Set to 0 to disable."
+          },
+          "context": {
+            "type": "string",
+            "description": "Background context for the search (optional). NOT used for embedding — only for future re-ranking."
+          }
+        },
+        "required": [
+          "query"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_check_duplicate",
+      "description": "Check if content already exists in the palace before filing",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Content to check"
+          },
+          "threshold": {
+            "type": "number",
+            "description": "Similarity threshold 0-1 (default 0.9)"
+          }
+        },
+        "required": [
+          "content"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_add_drawer",
+      "description": "File verbatim content into the palace. Checks for duplicates first.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Wing (project name)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Room (aspect: backend, decisions, meetings...)"
+          },
+          "content": {
+            "type": "string",
+            "description": "Verbatim content to store — exact words, never summarized"
+          },
+          "source_file": {
+            "type": "string",
+            "description": "Where this came from (optional)"
+          },
+          "added_by": {
+            "type": "string",
+            "description": "Who is filing this (default: mcp)"
+          }
+        },
+        "required": [
+          "wing",
+          "room",
+          "content"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_checkpoint",
+      "description": "Save a whole session in one call: semantic-dedups each item, files non-duplicates as drawers, then writes one diary entry. Use this instead of many separate check_duplicate/add_drawer/diary_write calls — it renders as a single tool-call card in the host UI.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "description": "Verbatim items to file. Each is {wing, room, content} — content is the exact words, never summarized.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "wing": {
+                  "type": "string",
+                  "description": "Wing (project name)"
+                },
+                "room": {
+                  "type": "string",
+                  "description": "Room (short topic: decisions, backend...)"
+                },
+                "content": {
+                  "type": "string",
+                  "description": "Verbatim content to store"
+                }
+              },
+              "required": [
+                "wing",
+                "room",
+                "content"
+              ]
+            }
+          },
+          "diary": {
+            "type": "object",
+            "description": "Optional diary entry written after filing: {agent_name, entry, topic?, wing?}. entry is AAAK-format.",
+            "properties": {
+              "agent_name": {
+                "type": "string",
+                "description": "Agent name (e.g. cursor-ide)"
+              },
+              "entry": {
+                "type": "string",
+                "description": "Diary entry in AAAK format"
+              },
+              "topic": {
+                "type": "string",
+                "description": "Topic tag (optional)"
+              },
+              "wing": {
+                "type": "string",
+                "description": "Target wing (optional)"
+              }
+            }
+          },
+          "dedup_threshold": {
+            "type": "number",
+            "description": "Similarity threshold 0-1 for the per-item dedup check (default 0.9)"
+          },
+          "added_by": {
+            "type": "string",
+            "description": "Who is filing these drawers. An explicit value takes precedence; otherwise the diary agent_name, else 'checkpoint'."
+          }
+        },
+        "required": [
+          "items"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_delete_drawer",
+      "description": "Delete a drawer by ID. Irreversible.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to delete"
+          }
+        },
+        "required": [
+          "drawer_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_mine",
+      "description": "Mine a directory into the palace — the MCP equivalent of `mempalace mine`. mode='projects' (default) ingests code/docs; mode='convos' ingests chat transcripts; mode='extract' ingests office documents (PDF/DOCX/RTF, requires the mempalace[extract] extra). Runs synchronously and returns the miner's summary as `output`. The palace write lock is automatic; a concurrent mine returns a structured already-running error. Orphan cleanup is separate — use mempalace_sync.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "type": "string",
+            "description": "Directory to mine."
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "projects",
+              "convos",
+              "extract"
+            ],
+            "description": "Ingest mode: projects (code/docs, default), convos (chat transcripts), extract (office docs)."
+          },
+          "wing": {
+            "type": "string",
+            "description": "Target wing (default: source directory name)."
+          },
+          "agent": {
+            "type": "string",
+            "description": "Recorded on every drawer (default: mempalace)."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max files to process (0 = all). Default: 0."
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Report what would be filed without writing. Default: false."
+          },
+          "extract": {
+            "type": "string",
+            "enum": [
+              "exchange",
+              "general"
+            ],
+            "description": "Convos extraction strategy: exchange (default) or general. Ignored by other modes."
+          }
+        },
+        "required": [
+          "source"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_delete_by_source",
+      "description": "Bulk-delete every drawer mined from one source_file (exact match). Use to clean up benchmark/test data accidentally mined into a user wing (#1722). Returns a dry-run match count and sample by default; pass dry_run=false to commit. Irreversible.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "source_file": {
+            "type": "string",
+            "description": "Exact source_file metadata value to remove (e.g. the full path that was mined)"
+          },
+          "dry_run": {
+            "type": "boolean",
+            "description": "Preview the match count without deleting; default true. Pass false to actually delete."
+          }
+        },
+        "required": [
+          "source_file"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_sync",
+      "description": "Prune drawers whose source files are gitignored, deleted, or moved. Returns dry-run report by default; pass apply=true to commit deletions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Project root to scope the sync (optional; auto-detected from drawer metadata if omitted)"
+          },
+          "wing": {
+            "type": "string",
+            "description": "Limit to one wing (optional)"
+          },
+          "apply": {
+            "type": "boolean",
+            "description": "Actually delete drawers; default is dry-run preview"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_get_drawer",
+      "description": "Fetch a single drawer by ID — returns full content and metadata.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to fetch"
+          }
+        },
+        "required": [
+          "drawer_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_list_drawers",
+      "description": "List drawers with pagination. Optional wing/room filter and since/before date filter on filed_at (since inclusive, before exclusive; drawers without a parseable filed_at are excluded when a date bound is set). Returns IDs, wings, rooms, content previews, and total matching count for pagination.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "wing": {
+            "type": "string",
+            "description": "Filter by wing (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "since": {
+            "type": "string",
+            "description": "Only drawers filed on or after this ISO date/time, inclusive (e.g. '2026-04-01'). Optional."
+          },
+          "before": {
+            "type": "string",
+            "description": "Only drawers filed before this ISO date/time, exclusive (e.g. '2026-05-01'). Optional."
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max results per page (default 20, max 100)",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "offset": {
+            "type": "integer",
+            "description": "Offset for pagination (default 0)",
+            "minimum": 0
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_update_drawer",
+      "description": "Update an existing drawer's content and/or metadata (wing, room). Fetches existing drawer first; returns error if not found.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "drawer_id": {
+            "type": "string",
+            "description": "ID of the drawer to update"
+          },
+          "content": {
+            "type": "string",
+            "description": "New content (optional — omit to keep existing)"
+          },
+          "wing": {
+            "type": "string",
+            "description": "New wing (optional — omit to keep existing)"
+          },
+          "room": {
+            "type": "string",
+            "description": "New room (optional — omit to keep existing)"
+          }
+        },
+        "required": [
+          "drawer_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_diary_write",
+      "description": "Write to your personal agent diary in AAAK format. Your observations, thoughts, what you worked on, what matters. Each agent has their own diary with full history. Write in AAAK for compression — e.g. 'SESSION:2026-04-04|built.palace.graph+diary.tools|ALC.req:agent.diaries.in.aaak|★★★'. Use entity codes from the AAAK spec.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agent_name": {
+            "type": "string",
+            "description": "Your name — each agent gets their own diary wing"
+          },
+          "entry": {
+            "type": "string",
+            "description": "Your diary entry in AAAK format — compressed, entity-coded, emotion-marked"
+          },
+          "topic": {
+            "type": "string",
+            "description": "Topic tag (optional, default: general)"
+          },
+          "wing": {
+            "type": "string",
+            "description": "Target wing for this diary entry (optional). If omitted, uses wing_{agent_name}. Use this to write diary entries to a project wing instead of an agent-specific wing."
+          },
+          "content": {
+            "type": "string",
+            "description": "Alias for 'entry' — accepted because add_drawer uses 'content'. Provide either 'entry' or 'content'; 'entry' wins if both are given."
+          }
+        },
+        "required": [
+          "agent_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_diary_read",
+      "description": "Read your recent diary entries (in AAAK). See what past versions of yourself recorded — your journal across sessions.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "agent_name": {
+            "type": "string",
+            "description": "Your name — each agent gets their own diary wing"
+          },
+          "last_n": {
+            "type": "integer",
+            "description": "Number of recent entries to read (default: 10)"
+          },
+          "wing": {
+            "type": "string",
+            "description": "Wing to read diary entries from (optional). If omitted, reads from wing_{agent_name}."
+          }
+        },
+        "required": [
+          "agent_name"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_hook_settings",
+      "description": "Get or set hook behavior. silent_save: True = save directly (no MCP clutter), False = legacy blocking. desktop_toast: True = show desktop notification. Call with no args to view.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "silent_save": {
+            "type": "boolean",
+            "description": "True = silent direct save, False = blocking MCP calls"
+          },
+          "desktop_toast": {
+            "type": "boolean",
+            "description": "True = show desktop toast via notify-send"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_memories_filed_away",
+      "description": "Check if a recent palace checkpoint was saved. Returns message count and timestamp.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_reconnect",
+      "description": "Force reconnect to the palace database. Use after external scripts or CLI commands modified the palace directly, which can leave the in-memory HNSW index stale.",
+      "parameters": {
+        "type": "object",
+        "properties": {}
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_event_append",
+      "description": "Append an immutable agent-coordination event to the logstream (RFC 003). Use for delegating work (task.request), replying (task.reply), and announcing artifacts (patch.ready). Events are append-only; corrections are new events.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "description": "Event type, e.g. 'task.request', 'task.reply', 'patch.ready'"
+          },
+          "stream": {
+            "type": "string",
+            "description": "Logical stream, e.g. 'project/mempalace' or 'shared_agent_brain'"
+          },
+          "room": {
+            "type": "string",
+            "description": "Sub-channel, e.g. 'delegation', 'patches', 'reviews', 'status'"
+          },
+          "from_agent": {
+            "type": "string",
+            "description": "Writer agent identity"
+          },
+          "to_agent": {
+            "type": "string",
+            "description": "Target agent, or '*' for broadcast (optional)"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Task/conversation id tying request and reply events (optional)"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Git branch, when relevant (optional)"
+          },
+          "base_commit": {
+            "type": "string",
+            "description": "Git commit the work started from (optional)"
+          },
+          "status": {
+            "type": "string",
+            "description": "One of: open, claimed, ready, applied, blocked, failed, superseded (optional)"
+          },
+          "body": {
+            "type": "string",
+            "description": "Verbatim human-readable content (optional, max 256 KiB)"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Extra structured fields, stored verbatim (optional)"
+          },
+          "artifact_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Ids of already-stored artifacts to reference (optional)"
+          }
+        },
+        "required": [
+          "type",
+          "stream",
+          "room",
+          "from_agent"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_event_list",
+      "description": "List agent-coordination events with structured filters, oldest first. Use since_event_id as the precise resume cursor (strictly after that event).",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "string",
+            "description": "Filter by stream (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Filter by event type (optional)"
+          },
+          "to_agent": {
+            "type": "string",
+            "description": "Filter by target agent; also matches '*' broadcasts (optional)"
+          },
+          "from_agent": {
+            "type": "string",
+            "description": "Filter by writer (optional)"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Filter by correlation id (optional)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status (optional)"
+          },
+          "since_event_id": {
+            "type": "string",
+            "description": "Return only events strictly after this event id (optional)"
+          },
+          "since_created_at": {
+            "type": "string",
+            "description": "Return events created at or after this time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max events to return (default 50)"
+          },
+          "preview": {
+            "type": "boolean",
+            "description": "Truncate each event body to a short excerpt (marks body_truncated + body_length) so scanning many events stays cheap; re-fetch a specific event's full body with a targeted since_event_id (default false)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_event_wait",
+      "description": "Block until a matching coordination event exists or the timeout expires (max 5 minutes). Returns {timed_out: true, events: []} on timeout instead of an error.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "stream": {
+            "type": "string",
+            "description": "Filter by stream (optional)"
+          },
+          "room": {
+            "type": "string",
+            "description": "Filter by room (optional)"
+          },
+          "type": {
+            "type": "string",
+            "description": "Filter by event type (optional)"
+          },
+          "to_agent": {
+            "type": "string",
+            "description": "Filter by target agent; also matches '*' broadcasts (optional)"
+          },
+          "from_agent": {
+            "type": "string",
+            "description": "Filter by writer (optional)"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Filter by correlation id (optional)"
+          },
+          "status": {
+            "type": "string",
+            "description": "Filter by status (optional)"
+          },
+          "since_event_id": {
+            "type": "string",
+            "description": "Only match events strictly after this event id (optional)"
+          },
+          "since_created_at": {
+            "type": "string",
+            "description": "Only match events created at or after this time (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ, optional)"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "description": "How long to wait in milliseconds (default 60000, max 300000)"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "Max events to return when matches exist (default 50)"
+          }
+        }
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_event_ack",
+      "description": "Acknowledge a coordination event: appends a new event.ack routed back to the original writer with the correlation id copied. Never mutates the target event.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "event_id": {
+            "type": "string",
+            "description": "Id of the event to acknowledge"
+          },
+          "from_agent": {
+            "type": "string",
+            "description": "Acknowledging agent identity"
+          },
+          "status": {
+            "type": "string",
+            "description": "One of: open, claimed, ready, applied, blocked, failed, superseded (optional)"
+          },
+          "body": {
+            "type": "string",
+            "description": "Verbatim ack notes (optional)"
+          }
+        },
+        "required": [
+          "event_id",
+          "from_agent"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_artifact_put",
+      "description": "Store exact artifact content (unified diff patch, file, log, json, note) for agent handoffs. Returns id, sha256, and size_bytes. UTF-8 text only, max 4 MiB.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "description": "One of: patch, file, log, json, note"
+          },
+          "content": {
+            "type": "string",
+            "description": "Exact artifact content"
+          },
+          "created_by": {
+            "type": "string",
+            "description": "Writer agent identity"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Extra structured fields, e.g. branch/base_commit (optional)"
+          }
+        },
+        "required": [
+          "kind",
+          "content",
+          "created_by"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_artifact_get",
+      "description": "Fetch a coordination artifact by id — exact content plus sha256 for verification.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "artifact_id": {
+            "type": "string",
+            "description": "Artifact id to fetch"
+          }
+        },
+        "required": [
+          "artifact_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "mempalace_patch_submit",
+      "description": "Convenience: store a patch artifact and append its patch.ready event in one call. Use when handing completed work to another agent.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "description": "Unified diff content"
+          },
+          "from_agent": {
+            "type": "string",
+            "description": "Submitting agent identity"
+          },
+          "stream": {
+            "type": "string",
+            "description": "Logical stream, e.g. 'project/mempalace'"
+          },
+          "room": {
+            "type": "string",
+            "description": "Sub-channel (default 'patches')"
+          },
+          "to_agent": {
+            "type": "string",
+            "description": "Target agent or '*' (optional)"
+          },
+          "correlation_id": {
+            "type": "string",
+            "description": "Task id tying this patch to its request (optional)"
+          },
+          "branch": {
+            "type": "string",
+            "description": "Git branch (optional)"
+          },
+          "base_commit": {
+            "type": "string",
+            "description": "Git commit the patch applies to (optional)"
+          },
+          "body": {
+            "type": "string",
+            "description": "Verbatim notes (optional)"
+          },
+          "metadata": {
+            "type": "object",
+            "description": "Extra structured fields (optional)"
+          }
+        },
+        "required": [
+          "content",
+          "from_agent",
+          "stream"
+        ]
+      }
+    }
+  }
+]
