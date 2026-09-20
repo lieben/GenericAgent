@@ -154,6 +154,21 @@ http://<电脑A的局域网IP>:1016/v1/chat/completions
 
 模型名填 `xavier-gemini-pro`。
 
+## MemPalace（Xavier session 全量入库 + 主动召回）
+
+封装 API 每轮结束后，把问答异步写入 NAS 上那一座记忆宫殿的 `wing_xavier_api`；下一轮按 query 语义检索，注入模型指令。其它模块仍只做冷备份。
+
+这份仓库只带打电话的听筒 `ga_api_mempalace.py`，**不带宫殿本体**。compose、数据卷、令牌都是对方自己在 NAS 上配的。
+
+```text
+MEMPALACE_MCP_URL          默认 http://192.168.1.126:8765/mcp
+MEMPALACE_MCP_HTTP_TOKEN   或本机 keychain `mempalace_http_token`
+```
+
+开关在 `ga_api_config.json` 的 `mempalace`：`enabled` / `wing` / `search_limit` / `max_distance`。改完需重启 1016。仓库不存 Token。
+
+桌面 agent 的 hooks 插件、工具 schema 是本地宫殿接入，不在这份 API 封装里。
+
 ## 功能特性
 
 - 完整工具穿透：桌面会话里的原子工具都可用（Chatbox / 微信私聊经 1016 可下命令）
@@ -161,6 +176,7 @@ http://<电脑A的局域网IP>:1016/v1/chat/completions
 - 群聊限制在微信群插件（程序门 / Flash），不在 1016 运输层拦词
 - 排队执行：多请求串行处理，避免冲突
 - OpenAI 兼容：非流式 JSON + 流式 SSE（`stream: true`）都按官方协议返回，第三方客户端可直接对接
+- MemPalace：1016 的问答写入 `wing_xavier_api` 并主动召回；听筒在 `ga_api_mempalace.py`
 
 ## 故障排除
 

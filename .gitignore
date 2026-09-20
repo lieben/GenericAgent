@@ -157,6 +157,10 @@ frontends/conductor_im_plugins/*
 # Beta 渠道：订阅门户插件（仅 beta 分发携带，不入库）
 plugins/subscription_portal.py
 
+# MemPalace 桌面插件：宫殿本体是朋友 NAS 自配；API 封装只跟踪 ga_api_mempalace.py
+plugins/mempalace_mcp.py
+assets/mempalace_tools_schema.json
+
 # WeChat monitor runtime: pid/lock/state/logs/backups stay on disk, never in git
 plugins/wechat_*_monitor/*.pid
 plugins/wechat_*_monitor/*.lock

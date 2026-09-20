@@ -89,7 +89,7 @@ def _get_mempalace_client():
     global _mempalace_client
     if _mempalace_client is None:
         try:
-            from plugins.mempalace_mcp import MemPalaceMCPClient
+            from ga_api_mempalace import MemPalaceMCPClient
             _mempalace_client = MemPalaceMCPClient()
         except Exception as exc:
             print(f"[MemPalace] Failed to initialize client: {exc}")
