@@ -4,6 +4,8 @@ GA API Server - OpenAI Compatible API for GenericAgent
 将整个 GA 系统封装为 OpenAI 兼容的 API 服务
 """
 import os, sys, json, time, threading, re, queue, asyncio, urllib.request, urllib.error
+import base64, binascii, mimetypes, tempfile
+import urllib.parse
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from pathlib import Path
@@ -106,6 +108,76 @@ def _text_content(value):
 def _content_text(value):
     """Text used for queue display/safety checks without altering attachment blocks."""
     return _text_content(value) if not isinstance(value, str) else value
+
+
+_IMAGE_DATA_RE = re.compile(r"^data:(image/[A-Za-z0-9.+-]+);base64,([A-Za-z0-9+/=\s]+)$")
+_ALLOWED_IMAGE_MIMES = {"image/png", "image/jpeg", "image/gif", "image/webp", "image/bmp", "image/tiff"}
+
+
+def _materialize_image_url(url: str, temp_paths: list[str]) -> str:
+    """Turn an OpenAI image URL into a local path; never return/send its base64."""
+    if not isinstance(url, str) or not url:
+        raise ValueError("image_url has no URL")
+    match = _IMAGE_DATA_RE.match(url)
+    if match:
+        mime, encoded = match.groups()
+        if mime not in _ALLOWED_IMAGE_MIMES:
+            raise ValueError(f"unsupported image MIME type: {mime}")
+        try:
+            raw = base64.b64decode(re.sub(r"\\s+", "", encoded), validate=True)
+        except (ValueError, binascii.Error) as exc:
+            raise ValueError("invalid image data URL") from exc
+        suffix = mimetypes.guess_extension(mime) or ".img"
+    elif url.startswith(("/", "./", "../")):
+        path = os.path.abspath(url)
+        if not os.path.isfile(path):
+            raise ValueError("image file does not exist")
+        return path
+    else:
+        # Remote URLs are downloaded to a private temporary file, never forwarded as data URLs.
+        request = urllib.request.Request(url, headers={"User-Agent": "GenericAgent/1.0"})
+        with urllib.request.urlopen(request, timeout=30) as response:
+            raw = response.read(25 * 1024 * 1024 + 1)
+            if len(raw) > 25 * 1024 * 1024:
+                raise ValueError("image is too large")
+        suffix = os.path.splitext(urllib.parse.urlparse(url).path)[1] or ".img"
+    fd, path = tempfile.mkstemp(prefix="ga-api-image-", suffix=suffix)
+    try:
+        with os.fdopen(fd, "wb") as handle:
+            handle.write(raw)
+    except Exception:
+        try: os.unlink(path)
+        except OSError: pass
+        raise
+    temp_paths.append(path)
+    return path
+
+
+def _prepare_multimodal_content(content, temp_paths: list[str]):
+    """Extract text and convert OpenAI image blocks into bridge imageMetas paths."""
+    text_parts = []
+    image_metas = []
+    if isinstance(content, str):
+        return content, image_metas
+    if not isinstance(content, list):
+        return "", image_metas
+    for part in content:
+        if not isinstance(part, dict):
+            continue
+        kind = part.get("type")
+        if kind in ("text", "input_text", "output_text") and isinstance(part.get("text"), str):
+            text_parts.append(part["text"])
+        elif kind in ("image_url", "input_image"):
+            image = part.get("image_url") if kind == "image_url" else part
+            url = image.get("url") if isinstance(image, dict) else None
+            image_metas.append({"path": _materialize_image_url(url, temp_paths)})
+    return "\n".join(text_parts), image_metas
+
+
+def _safe_preview(value, limit=160):
+    """Log request shape only; never log image data or raw multimodal blocks."""
+    text = _text_content(value).replace("data:image/", "data:image/[redacted]/")
+    return text[:limit] + ("..." if len(text) > limit else "")
 
 
 def _with_prefix(content, prefix):
@@ -617,18 +689,16 @@ async def completions(request: Request):
 async def chat_completions(request: ChatCompletionRequest):
     """OpenAI 兼容的聊天接口"""
 
-    
-    # Debug: log raw request fields to diagnose platform instructions
-    print(f"[ChatCompletions] Raw request fields:")
-    print(f"  - instructions: {getattr(request, 'instructions', None)}")
-    print(f"  - system: {getattr(request, 'system', None)}")
-    print(f"  - developer: {getattr(request, 'developer', None)}")
-    print(f"  - messages count: {len(request.messages) if request.messages else 0}")
+    # Debug: log request shape only; never print multimodal content (may contain image data).
+    print(f"[ChatCompletions] Request: instructions={bool(getattr(request, 'instructions', None))}, "
+          f"system={bool(getattr(request, 'system', None))}, developer={bool(getattr(request, 'developer', None))}, "
+          f"messages={len(request.messages) if request.messages else 0}")
     if request.messages:
-        for i, msg in enumerate(request.messages[:3]):  # Show first 3 messages
-            content_preview = msg.content[:200] if len(msg.content) > 200 else msg.content
-            print(f"    [{i}] role={msg.role}, content_length={len(msg.content)}")
-            print(f"        content: {content_preview}")
+        for i, msg in enumerate(request.messages[:3]):
+            content = msg.content
+            print(f"    [{i}] role={msg.role}, content_type={type(content).__name__}, "
+                  f"text_length={len(_content_text(content))}, "
+                  f"image_blocks={sum(isinstance(p, dict) and p.get('type') in ('image_url', 'input_image') for p in content) if isinstance(content, list) else 0}")
     
     # 检查是否包含确认令牌
     has_confirmation = check_confirmation_token(request.messages)
@@ -658,61 +728,67 @@ async def chat_completions(request: ChatCompletionRequest):
                 content=_openai_chat_completion(chat_id, created, request.model, warn_text),
             )
     
-    # 获取用户消息
+    # 获取用户消息；纯图片消息也是合法输入。
     user_message = ""
+    user_content = None
     for msg in reversed(request.messages):
         if msg.role == "user":
-            user_message = msg.content
+            user_content = msg.content
             break
-    
-    if not _content_text(user_message).strip():
+    if user_content is None:
         raise HTTPException(status_code=400, detail="No user message found")
-    
-    # Extract platform instructions and marker
-    platform_instructions, platform_marker = _chat_request_instructions(request)
-    if platform_instructions:
-        print(f"[ChatCompletions] Platform instructions ({len(platform_instructions)}ch):")
-        print(f"--- BEGIN FULL CONTENT ---")
-        print(platform_instructions)
-        print(f"--- END FULL CONTENT ---")
-        if platform_marker:
-            print(f"[ChatCompletions] Extracted platform marker: {platform_marker}")
-    else:
-        print(f"[ChatCompletions] No platform instructions received")
-    
-    # Inject timestamp for temporal context
-    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    timestamped_message = f"[{timestamp}]"
-    
-    # Inject platform marker (like 【.微信平台跨次元对话.】)
-    if platform_marker:
-        timestamped_message += f" {platform_marker}"
-        print(f"[ChatCompletions] Injected platform marker: {platform_marker}")
-    
-    timestamped_message += f" {user_message}"
-    print(f"[ChatCompletions] Final user message: {timestamped_message[:100]}...")
-    
-    attachments = {k: v for k, v in {
-        "files": request.files, "imageMetas": request.imageMetas, "images": request.images
-    }.items() if v}
-    
-    # PR is prepended to the agent prompt in _execute_api_turn.
-    # Do not put it in display — that field is UI-only and never reaches the model.
-    full_response = await _execute_api_turn(timestamped_message, request.messages,
-                                             instructions=platform_instructions,
-                                             attachments=attachments)
 
-    content = _clean_api_response(full_response)
-    created = int(time.time())
-    chat_id = f"chatcmpl-{created}"
-    if request.stream:
-        return StreamingResponse(
-            _sse_chat_stream(chat_id, created, request.model, content),
-            media_type="text/event-stream",
-            headers=_sse_headers(),
-        )
-    # 非流式：保持原 OpenAI chat.completion JSON，第三方现有对接不受影响
-    return _openai_chat_completion(chat_id, created, request.model, content)
+    temp_image_paths = []
+    try:
+        user_text, content_image_metas = _prepare_multimodal_content(user_content, temp_image_paths)
+        if not user_text.strip() and not content_image_metas:
+            raise HTTPException(status_code=400, detail="No user message found")
+        user_message = user_text.strip() or "请分析用户发送的图片。"
+
+        # Extract platform instructions and marker
+        platform_instructions, platform_marker = _chat_request_instructions(request)
+        if platform_instructions:
+            print(f"[ChatCompletions] Platform instructions ({len(platform_instructions)}ch)")
+            if platform_marker:
+                print(f"[ChatCompletions] Extracted platform marker: {platform_marker}")
+        else:
+            print(f"[ChatCompletions] No platform instructions received")
+
+        # Inject timestamp for temporal context
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        timestamped_message = f"[{timestamp}]"
+        if platform_marker:
+            timestamped_message += f" {platform_marker}"
+        timestamped_message += f" {user_message}"
+        print(f"[ChatCompletions] Final user message: {_safe_preview(timestamped_message)}")
+
+        attachments = {k: v for k, v in {
+            "files": request.files, "imageMetas": request.imageMetas, "images": request.images
+        }.items() if v}
+        if content_image_metas:
+            attachments["imageMetas"] = (attachments.get("imageMetas") or []) + content_image_metas
+
+        full_response = await _execute_api_turn(timestamped_message, request.messages,
+                                                 instructions=platform_instructions,
+                                                 attachments=attachments)
+        content = _clean_api_response(full_response)
+        created = int(time.time())
+        chat_id = f"chatcmpl-{created}"
+        if request.stream:
+            return StreamingResponse(
+                _sse_chat_stream(chat_id, created, request.model, content),
+                media_type="text/event-stream",
+                headers=_sse_headers(),
+            )
+        return _openai_chat_completion(chat_id, created, request.model, content)
+    finally:
+        for path in temp_image_paths:
+            try:
+                os.unlink(path)
+            except FileNotFoundError:
+                pass
+            except OSError as exc:
+                print(f"[ChatCompletions] Could not remove temporary image: {exc}")
 
 # ==================== 主程序 ====================
 
