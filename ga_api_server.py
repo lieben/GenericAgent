@@ -61,6 +61,12 @@ DEFAULT_CONFIG = {
             "format", "重启", "关机", "shutdown", "reboot",
             "kill -9", "pkill", "删除", "清空", "格式化"
         ]
+    },
+    "mempalace": {
+        "enabled": True,
+        "wing": "xavier_api",
+        "search_limit": 3,
+        "max_distance": 0.85
     }
 }
 
@@ -74,6 +80,85 @@ def load_config():
         return json.load(f)
 
 CONFIG = load_config()
+
+# ==================== MemPalace 集成辅助函数 ====================
+
+_mempalace_client = None
+
+def _get_mempalace_client():
+    global _mempalace_client
+    if _mempalace_client is None:
+        try:
+            from plugins.mempalace_mcp import MemPalaceMCPClient
+            _mempalace_client = MemPalaceMCPClient()
+        except Exception as exc:
+            print(f"[MemPalace] Failed to initialize client: {exc}")
+    return _mempalace_client
+
+def _search_mempalace_sync(query: str, wing: str = "xavier_api", limit: int = 3, max_distance: float = 0.85) -> str:
+    """从 MemPalace 检索相关历史记忆"""
+    mp_cfg = CONFIG.get("mempalace", {})
+    if not mp_cfg.get("enabled", True):
+        return ""
+    client = _get_mempalace_client()
+    if not client:
+        return ""
+    try:
+        clean_q = re.sub(r"\[\d{4}-\d{2}-\d{2}[^\]]*\]", "", query)
+        clean_q = re.sub(r"【.*?】", "", clean_q).strip()
+        if not clean_q:
+            return ""
+        # 截断 query 到 200 字符以内符合 MemPalace 要求
+        clean_q = clean_q[:200]
+        res = client.call_tool("mempalace_search", {
+            "wing": wing,
+            "query": clean_q,
+            "limit": limit,
+            "max_distance": max_distance
+        })
+        if isinstance(res, str):
+            try:
+                res = json.loads(res)
+            except Exception:
+                pass
+        if isinstance(res, dict) and res.get("results"):
+            matched_texts = []
+            for item in res["results"]:
+                c = item.get("content", "").strip()
+                if c:
+                    matched_texts.append(c)
+            if matched_texts:
+                return "\n---\n".join(matched_texts)
+    except Exception as exc:
+        print(f"[MemPalace] Search exception: {exc}")
+    return ""
+
+def _add_drawer_sync(content: str, wing: str = "xavier_api", room: str = "chat_history"):
+    """异步或后台写入 MemPalace"""
+    mp_cfg = CONFIG.get("mempalace", {})
+    if not mp_cfg.get("enabled", True):
+        return
+    client = _get_mempalace_client()
+    if not client:
+        return
+    try:
+        client.call_tool("mempalace_add_drawer", {
+            "wing": wing,
+            "room": room,
+            "content": content,
+            "added_by": "ga_api_server"
+        })
+    except Exception as exc:
+        print(f"[MemPalace] Add drawer exception: {exc}")
+
+def _save_turn_to_mempalace_async(user_text: str, assistant_text: str):
+    """在后台线程中将本次对话完整入库"""
+    def _worker():
+        now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # 格式化存入
+        entry = f"[{now_str}] 对话记录\n言言: {user_text}\n沈星回: {assistant_text}"
+        _add_drawer_sync(entry)
+    threading.Thread(target=_worker, daemon=True).start()
 
 # 从环境变量读取 API Key，默认使用 sk-wxxxx
 API_KEY = os.getenv(CONFIG["auth"]["api_key_env"], "sk-wxxxx")
@@ -593,6 +678,17 @@ async def _execute_api_turn(query, messages, instructions="", attachments=None):
     """
     attachments = dict(attachments or {})
     instruction_text = _text_content(instructions).strip()
+
+    # 检索 MemPalace 相关长期记忆
+    mp_memory = _search_mempalace_sync(query)
+    if mp_memory:
+        mp_context = f"【来自记忆宫殿的历史相关记忆】\n{mp_memory}\n"
+        if instruction_text:
+            instruction_text = f"{mp_context}\n{instruction_text}"
+        else:
+            instruction_text = mp_context
+        print(f"[_execute_api_turn] Injected MemPalace memories into instructions")
+
     agent_prompt = query
     if instruction_text:
         agent_prompt = (
@@ -605,7 +701,13 @@ async def _execute_api_turn(query, messages, instructions="", attachments=None):
         if not str(attachments.get("display") or "").strip():
             attachments["display"] = query
         print(f"[_execute_api_turn] Injected platform instructions ({len(instruction_text)}ch) into agent prompt")
-    return await asyncio.to_thread(_run_api_turn, agent_prompt, None, attachments)
+    
+    reply = await asyncio.to_thread(_run_api_turn, agent_prompt, None, attachments)
+    
+    # 将本次对话异步全量写入 MemPalace
+    _save_turn_to_mempalace_async(query, reply)
+    
+    return reply
 
 
 @app.post("/v1/responses")

@@ -32,5 +32,11 @@
       "清空",
       "格式化"
     ]
+  },
+  "mempalace": {
+    "enabled": true,
+    "wing": "xavier_api",
+    "search_limit": 3,
+    "max_distance": 0.85
   }
 }
