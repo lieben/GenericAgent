@@ -152,14 +152,20 @@ def image_local_path(m):
 
 
 _MEDIA_REFETCH_TRIED = set()
+_MEDIA_REFETCH_LAST = {}
+_MEDIA_REFETCH_RETRY_SECONDS = 5.0
 
 
 def refetch_media(talker, items, raw_by, state=None):
+    """Refresh image paths; allow retrying while WeFlow finishes materializing media."""
+    now = time.time()
     missing = [
         x for x in items
-        if x.get("is_image") and not x.get("media_path") and x.get("key") not in _MEDIA_REFETCH_TRIED
+        if x.get("is_image") and not x.get("media_path")
+        and now - float(_MEDIA_REFETCH_LAST.get(x.get("key"), 0) or 0) >= _MEDIA_REFETCH_RETRY_SECONDS
     ]
     for x in missing:
+        _MEDIA_REFETCH_LAST[x["key"]] = now
         _MEDIA_REFETCH_TRIED.add(x["key"])
     if not missing:
         return raw_by
@@ -349,17 +355,23 @@ def _image_data_url(path):
 
 
 def flash_caption_image(path):
-    """Describe a WeChat private-chat image with Flash. Returns short Chinese text or empty."""
+    """Describe a WeChat private-chat image with Flash. Returns detailed description or empty."""
     url, model, key = flash_config()
     data_url = _image_data_url(path)
-    prompt = "这是一张微信私聊图片。用一两句中文客观描述画面主要内容，不要猜测隐私，不要给建议，不要角色扮演。只描述你看到的。"
+    prompt = (
+        "这是一张微信私聊中接收到的图片。请进行高保真、结构化的详细解析，忠实还原画面中我需要看到的所有关键信息：\n"
+        "1. 如果是题目、谜题、智力题或试卷：完整提取所有文字、题干、选项、每一组图形/几何线框的准确结构（包括线条走向、开口方向、交点、排列位置、对称关系等）和数字，绝不要粗略概括，务必原原本本还原细节。\n"
+        "2. 如果包含文本/聊天截图/表格/代码：忠实识别所有文字内容与排版结构。\n"
+        "3. 如果是日常照片或表情包：客观清晰地描述画面主体、动作、神态或配字。\n"
+        "不要主观臆测隐私，不要角色扮演，直接输出解析内容。"
+    )
     raw = call_openai(url, model, [
         {"role": "user", "content": [
             {"type": "text", "text": prompt},
             {"type": "image_url", "image_url": {"url": data_url}},
         ]}
     ], timeout=45, api_key=key)
-    return re.sub(r"\s+", " ", str(raw or "").strip())[:300]
+    return re.sub(r"\s+", " ", str(raw or "").strip())[:1200]
 
 
 def caption_new_images(latest, state, raw_by_key=None):
@@ -670,7 +682,7 @@ def run_once(state, due_talkers=None):
     for talker, contact in CONTACTS.items():
         if talker not in due:
             continue
-        data = wf("messages", {"talker": talker, "limit": 100, "offset": 0})
+        data = wf("messages", {"talker": talker, "limit": 100, "offset": 0}, timeout=12, retries=1)
         raw = data.get("messages", [])
         all_items = [normalize(m, talker, contact, captions=state.get("image_captions")) for m in raw]
         clean_items = [x for x in all_items if not polluted_history_text(x["text"])]
