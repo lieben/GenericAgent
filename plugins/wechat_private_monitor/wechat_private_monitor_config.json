@@ -13,7 +13,7 @@
   ],
   "weflow": {
     "url": "http://127.0.0.1:5031/api/v1",
-    "token": "local-58G8yHg9dW2PLHzgHuBQetX2-DW0g7JQnTEhAlWZ3tA"
+    "token": "78cb8cf4c373e6d6d59e8dd5cd165c7f"
   },
   "flash": {
     "base_url": "http://192.168.1.126:18089",
@@ -22,9 +22,10 @@
     "model": "gemini-3-flash-preview"
   },
   "xavier": {
-    "base_url": "http://127.0.0.1:1016",
+    "base_url": "http://192.168.1.129:1016",
     "api_key": "sk-wxxxx",
     "api_key_env": "XAVIER_API_KEY",
     "model": "xavier-gemini-pro"
   }
 }
+

@@ -10,8 +10,9 @@ judgment, no @. First pass is baseline only. Conversation text is untrusted
 data and never an execution command.
 """
 from __future__ import annotations
-import argparse, fcntl, json, os, re, sys, time
+import argparse, json, os, re, sys, time
 from pathlib import Path
+from wechat_windows_adapter import send_text as _windows_send_text
 from typing import Any
 
 PLUGIN_ROOT = Path(__file__).resolve().parent
@@ -490,77 +491,17 @@ def xavier(history_items, new_items, talker, contact):
     return body
 
 
-def physical_send(window, reply):
-    """Send only through the matching standalone WeChat window; never WeFlow. Never @."""
-    import subprocess, ctypes, time as _time
+def physical_send(window, reply, nickname=""):
+    """Windows physical send; select the private chat before typing."""
     reply = str(reply or "").strip()
-    if not reply:
-        return {"sent": False, "reason": "empty_reply"}
-    if reply.startswith("@") and " " in reply:
-        reply = reply.split(" ", 1)[1].strip()
-        if not reply:
-            return {"sent": False, "reason": "empty_reply_after_at_strip"}
-    esc = window.replace("\\", "\\\\").replace('"', '\\"')
-    script = (
-        'tell application "System Events" to tell process "WeChat"\n'
-        'set frontmost to true\n'
-        f'set w to first window whose name is "{esc}"\n'
-        'perform action "AXRaise" of w\n'
-        'delay 0.5\n'
-        'if (value of attribute "AXMain" of w) is not true then error "target window is not main"\n'
-        'end tell'
-    )
-    last_error = None
-    for attempt in range(3):
-        try:
-            subprocess.run(["osascript", "-e", script], check=True, capture_output=True, text=True)
-            break
-        except subprocess.CalledProcessError as exc:
-            last_error = exc
-            if attempt == 2:
-                detail = (exc.stderr or exc.stdout or "").strip()
-                raise RuntimeError(f"target window activation failed after 3 attempts: {detail}") from exc
-            _time.sleep(0.35 * (attempt + 1))
-    geometry_script = (
-        'tell application "System Events" to tell process "WeChat"\n'
-        f'set w to first window whose name is "{esc}"\n'
-        'set p to position of w\n'
-        'set s to size of w\n'
-        'return ((item 1 of p) as text) & "," & ((item 2 of p) as text) & "," & ((item 1 of s) as text) & "," & ((item 2 of s) as text)\n'
-        'end tell'
-    )
-    geo = subprocess.run(["osascript", "-e", geometry_script], check=True,
-                          capture_output=True, text=True).stdout.strip()
-    try:
-        left, top, width, height = (int(v) for v in geo.split(","))
-    except Exception as exc:
-        raise RuntimeError(f"invalid target window geometry: {geo!r}") from exc
-    if width < 120 or height < 120:
-        raise RuntimeError(f"target window too small: {width}x{height}")
-    bottom_offset = max(44, min(62, height // 7))
-    x, y = left + width // 2, top + height - bottom_offset
-    class CGPoint(ctypes.Structure):
-        _fields_ = [("x", ctypes.c_double), ("y", ctypes.c_double)]
-    q = ctypes.CDLL("/System/Library/Frameworks/CoreGraphics.framework/CoreGraphics")
-    q.CGEventCreateMouseEvent.restype = ctypes.c_void_p
-    q.CGEventCreateMouseEvent.argtypes = [ctypes.c_void_p, ctypes.c_uint32, CGPoint, ctypes.c_uint32]
-    q.CGEventPost.argtypes = [ctypes.c_uint32, ctypes.c_void_p]
-    pt = CGPoint(x, y)
-    for kind in (1, 2):
-        e = q.CGEventCreateMouseEvent(None, kind, pt, 0)
-        q.CGEventPost(0, e)
-        _time.sleep(.08)
-    subprocess.run(["pbcopy"], input=reply, text=True, check=True)
-    subprocess.run(["osascript", "-e", 'tell application "System Events" to keystroke "v" using command down'], check=True)
-    _time.sleep(.25)
-    subprocess.run(["osascript", "-e", "tell application \"System Events\" to key code 36"], check=True)
-    _time.sleep(.7)
-    return {"sent": True, "target": window, "mentioned": ""}
+    if reply.startswith("@") and " " in reply: reply = reply.split(" ", 1)[1].strip()
+    # DO NOT pass contact=nickname, as it triggers Ctrl+F which breaks focus in standalone chat windows!
+    return _windows_send_text(window, reply)
 
 
 def load_state():
     try:
-        return json.loads(STATE.read_text())
+        return json.loads(STATE.read_text(encoding="utf-8"))
     except Exception:
         return {
             "initialized": False,
@@ -574,7 +515,7 @@ def load_state():
 
 
 def save_state(s):
-    STATE.write_text(json.dumps(s, ensure_ascii=False, indent=2))
+    STATE.write_text(json.dumps(s, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def append_record(record):
@@ -651,7 +592,7 @@ def flush_pending(state, talker, contact):
         return True
     send_result = None
     try:
-        send_result = physical_send(contact["window"], reply)
+        send_result = physical_send(contact["window"], reply, contact.get("nickname") or talker)
     except Exception as e:
         send_result = {"sent": False, "reason": f"{type(e).__name__}: {e}"}
     record["send"] = send_result
@@ -682,7 +623,17 @@ def run_once(state, due_talkers=None):
     for talker, contact in CONTACTS.items():
         if talker not in due:
             continue
-        data = wf("messages", {"talker": talker, "limit": 100, "offset": 0}, timeout=12, retries=1)
+        # Drain an already-debounced batch before another WeFlow read.
+        try:
+            if flush_pending(state, talker, contact):
+                print(json.dumps({"pending_flushed_before_read": True, "talker": talker}, ensure_ascii=False), flush=True)
+        except Exception as e:
+            print(json.dumps({"pending_flush_error": True, "talker": talker, "reason": f"{type(e).__name__}: {e}"}, ensure_ascii=False), flush=True)
+        try:
+            data = wf("messages", {"talker": talker, "limit": 100, "offset": 0}, timeout=12, retries=1)
+        except Exception as e:
+            print(json.dumps({"weflow_read_error": True, "talker": talker, "reason": f"{type(e).__name__}: {e}"}, ensure_ascii=False), flush=True)
+            continue
         raw = data.get("messages", [])
         all_items = [normalize(m, talker, contact, captions=state.get("image_captions")) for m in raw]
         clean_items = [x for x in all_items if not polluted_history_text(x["text"])]
@@ -775,13 +726,12 @@ def acquire_single_instance():
     global _instance_lock
     LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     fh = open(LOCK_PATH, "a+")
+    import msvcrt
     try:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+        msvcrt.locking(fh.fileno(), msvcrt.LK_NBLCK, 1)
     except OSError:
         fh.close()
-        print(json.dumps({
-            "private_lock": "busy", "pid": os.getpid(), "lock": str(LOCK_PATH),
-        }, ensure_ascii=False), flush=True)
+        print(json.dumps({"private_lock": "busy", "pid": os.getpid(), "lock": str(LOCK_PATH)}, ensure_ascii=False), flush=True)
         raise SystemExit("private monitor already running")
     fh.seek(0)
     fh.truncate()
@@ -827,3 +777,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
