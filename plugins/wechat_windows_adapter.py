@@ -31,7 +31,7 @@ def send_text(title: str, text: str, *, mention: str='', contact: str=''):
     with open(PENDING_FILE, 'w', encoding='utf-8-sig') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
         
-    subprocess.run(['schtasks', '/run', '/tn', 'Xinghui-Scan-Win'], capture_output=True, timeout=10)
+    subprocess.run(['schtasks', '/run', '/tn', 'SendTestTask'], capture_output=True, timeout=10)
     
     deadline = time.time() + 8.0
     res_data = None
