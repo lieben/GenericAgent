@@ -1,0 +1,31 @@
+# Xavier API PR注入
+
+## 坑
+- `desktop_bridge.submit_prompt` 的 `display` 只进 Xavier-chat 气泡，不进模型；真正喂模型的是 `prompt`（→ `put_task`）
+- 切桌面会话时删了 `extra_sys_prompts`；之后把第三方 PR 塞进 `display`，气泡看起来“恢复了”，模型实际读不到
+- `extra_sys_prompts` 是进程级常驻，不能按轮挂平台 PR
+- 群聊 `wechat_xavier_group_monitor` 把 PR 放在 `messages` 第一条 `system`，不是顶层 `instructions`；`_chat_request_instructions` 两者都收
+
+## 正确做法
+- `ga_api_server.py` 的 `_execute_api_turn`：把 instruction_text 拼进 agent_prompt；`display` 只留用户气泡
+- 改完必须重启 1016。验证看 `app/ga_api_server.log` 是否出现 `Injected platform instructions`，以及 agent prompt 含 PR 正文（不是只看气泡）
+- `stream:true` 必须走 SSE（`data: {"choices":[{"delta":{"content":...}}]}` + `data: [DONE]`）；非流式仍返回 `choices[0].message.content`。只改 stream 分支，PR 注入 / display / 附件路径不动。`/v1/completions` 流式 chunk 字段是 `text` 不是 `delta`
+- `ga_api_config.json` 的 `dangerous_operations_require_confirm` 已关（false）。1016 对 Chatbox / 微信私聊全工具穿透；群聊限制只在 `wechat_group_monitor`。改这项必须重启 1016（CONFIG 启动时加载）
+- 不要再用「删除」等词探测 1016：闸关后 `/v1/chat/completions` 和 `/v1/completions` 都会进 Xavier-chat，并占 `api_lock` 最多 300s。验证用 `/health`、`/v1/models`，或看进程启动时间是否晚于配置 mtime
+
+## MemPalace（Xavier API 全量入库 + 主动召回）
+- 范围：只对封装 API（1016 / Xavier session）全量入并真正检索使用；其它模块仅冷备份。核心偏好/人设卡仍走启动预加载，不靠检索当本能。
+- 配置：`ga_api_config.json` → `mempalace: {enabled: true, wing: "xavier_api", search_limit: 3, max_distance: 0.85}`。改完必须重启 1016（CONFIG 启动时加载）。本机回环测 1016 禁走代理（会 502），用空 ProxyHandler。
+- 召回：`_execute_api_turn` 开头 `_search_mempalace_sync(query)`（query 去时间戳/【】后截 200 字），命中则拼进 `instruction_text` 前的 `【来自记忆宫殿的历史相关记忆】`，再进 agent_prompt。日志应出现 `Injected MemPalace memories into instructions`。
+- 入库：回复完成后 `_save_turn_to_mempalace_async(query, reply)` 后台线程写 `wing_xavier_api` / room `chat_history`，`added_by=ga_api_server`，不阻塞主线程。失败只 print，不抛。
+- 分层：全量聊天解决不遗忘与跨设备备份；提炼后的事实记忆才是本能级响应。验证检索用 `/v1/chat/completions` 问已知事实，再 `mempalace_search wing=xavier_api`。
+- 本机听筒：`ga_api_mempalace.py` 跟 API 封装走，连 NAS 官方 MCP `http://192.168.1.126:8765/mcp`。Token 走 `MEMPALACE_MCP_HTTP_TOKEN` 或 keychain `mempalace_http_token`，仓库不存密钥。宫殿本体（compose/数据卷/令牌）是朋友自己配的，不进这个仓库。
+- 桌面插件：`plugins/mempalace_mcp.py` + `plugins/hooks.py` + `assets/mempalace_tools_schema.json` 只给本地 agent 注入工具，不跟踪。`ga_api_server` 只 `from ga_api_mempalace import MemPalaceMCPClient`。没有第二座宫殿，独立的是翼 `wing_xavier_api`。
+- 深空百科按需召回：`mempalace.lore`，索引 `temp/lysk_wiki_深空百科_entries.json`，翼 `lore`。只对用户原文做标题精确匹配（长词优先，短词有停用表），每轮最多 3 条、1600 字；语义检索结果必须回核 `【世界书】标题`。闲聊不注入。日志为 `Injected lore worldbook`。lore 语义检索会误配，不能拿它当唯一入口。文风样本另放，不进这本世界书。
+
+## 独立 API 与固定 Xavier session
+- `ga_api_server.py` 已验证可直接启动官方 `GenericAgent`，API 请求不依赖桌面 Bridge（14168）；桌面端保持官方实现、作为独立调用通道。
+- **言言最新明确要求（2026-10-10，覆盖冲突旧约定）**：所有调用同一 API 的渠道（第三方、微信群聊、微信私聊）共用一条连续主对白记忆，不按平台、群、联系人隔离。来源暗号、发言者与双向时间戳只用于辨认来源，不用于切分记忆；最近 50 轮为全渠道合计。历史中任何“API 渠道记忆隔离”或旧 20 轮约定均被此要求取代，除非言言之后明确变更。
+- API 主对白独立存于 `temp/api_chat_history.json`，只回灌对白，不混入工具轨迹、内部 summary 或旧轮特殊 sys PR；共享桌面 session 只用于旧对白迁移，不再每轮写回其执行历史。总 sys PR、当轮临时 PR、插件/MCP 召回保持原生职责。
+- 群聊/私聊监控进程、发送与修改范围的强隔离仍有效，但不等于 API 记忆隔离；共享记忆不授权把私聊内容公开到群聊。
+- 修改后必须重载 `com.xinghui.ga.api` LaunchAgent；验收顺序为 `/health`、`/v1/models`、最小真实 `/v1/chat/completions`，并确认日志无 Bridge 请求且 history 成功增长。

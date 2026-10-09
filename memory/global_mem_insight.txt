@@ -1,0 +1,27 @@
+# [Global Memory Insight]
+Read L2 or ls ../memory/ for L3 when needed
+L0(META-SOP): memory_management_sop
+L2: proxy | diary_system | dream_system | mempalace | xinghui_free_life | API统一记忆
+L3: memory_cleanup_sop(memory cleanup) | ui_detect.py | ocr_utils.py | subagent | web_setup_sop
+| procmem_scanner | keychain | ljqCtrl_sop+.py | tmwebdriver_sop | autonomous_operation_sop | scheduled_task_sop | vision_sop | adb_ui.py | project_mode_sop | wechat_mac_sop(微信降级) | weflow_read_sop | ga_api_xavier_sop(PR注入) | wechat_group_monitor_sop(程序门) | wechat_private_monitor_sop(私聊与隔离)
+L3: L3_raw_sessions/ historical sessions | diary_dream_sop(日记/梦境规则与调度窗口)
+L3: xhs_browse_sop | xhs_publish_sop(图文草稿) | xinghui_group_daily_sop | group_daily_to_image_sop | image_generation_sop | visual_style_library | emoji_sop | clawbot_group_sop_guard_sop | sophub_sop | sullyos_interaction_sop | esp_idf_mac_sop(乐鑫IDF)
+L3: github_contribution_sop | github_https_push_sop(PAT推送) | ga_cyber_lover_dist_sop(赛博恋人分发) | xinghui_free_life_sop(自由生活与伴读)
+
+Browser special ops: tmwebdriver_sop(file upload/image search/PDF blob/physical coords/HttpOnly Cookie/autofill bypass/cross-origin iframe/CDP/cross-tab)
+Keyboard/Mouse: ljqCtrl_sop(no pyautogui/activate first)
+UI/Screenshot/Vision: computer_use.md | vision_sop | window screenshot use ljqCtrl
+Scheduling: scheduled_task_sop | Autonomous: autonomous_operation_sop | watchdog/reflect: agentmain --reflect
+Mobile: adb_ui.py
+
+[RULES]
+1. Search first: no huge PS recursion/no dir traversal for file search, prefer Google for web search, check cwd first, no guessing paths
+2. Cross-verify: never trust summaries, verify numbers on detail pages
+3. Encoding safety: use file_read not PS cat/type; read before modify; import memory modules directly (already in PATH, no fake prefixes)
+4. Close the loop: confirm after physical simulation; request intervention after 3 failures
+5. Processes: never kill python unconditionally (kills self), use exact PID, no os.kill for liveness check
+6. Windows: prefer win32gui title enumeration for GUI state
+7. Web JS: use native setter + event chain for input, check disabled before click, mind quote escaping; if scan empty/incomplete wait then rescan, no conclusions from first scan
+8. SOP: read SOPs not from memory, must use utils if available; 同步禁旧副本覆盖已验证修复，先核对历史与回归测试
+9. GitHub大文件走系统代理，禁--noproxy直连；本机回环与乐鑫cn镜像禁走代理(EOF/502)
+10. 日记/梦境禁编造言言行止；远程对话禁写成肢体现场；人设卡≠当天说过

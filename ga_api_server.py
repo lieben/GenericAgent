@@ -6,6 +6,11 @@ GA API Server - OpenAI Compatible API for GenericAgent
 import os, sys, json, time, threading, re, queue, asyncio, urllib.request, urllib.error
 import base64, binascii, mimetypes, tempfile
 import urllib.parse
+import copy
+try:
+    import fcntl
+except ImportError:
+    fcntl = None
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +20,7 @@ from contextlib import asynccontextmanager
 # 添加 GA 路径
 script_dir = Path(__file__).parent.absolute()
 sys.path.insert(0, str(script_dir))
+from agentmain import GenericAgent
 
 
 # 与桌面端 frontends/desktop_bridge.py 的 _FINAL_INFO_RE 保持一致；
@@ -62,11 +68,19 @@ DEFAULT_CONFIG = {
             "kill -9", "pkill", "删除", "清空", "格式化"
         ]
     },
+    "chat_history": {"max_turns": 50},
     "mempalace": {
         "enabled": True,
         "wing": "xavier_api",
         "search_limit": 3,
-        "max_distance": 0.85
+        "max_distance": 0.85,
+        "lore": {
+            "enabled": True,
+            "wing": "lore",
+            "max_hits": 3,
+            "max_chars": 1600,
+            "index_file": "temp/lysk_wiki_深空百科_entries.json"
+        }
     }
 }
 
@@ -94,6 +108,113 @@ def _get_mempalace_client():
         except Exception as exc:
             print(f"[MemPalace] Failed to initialize client: {exc}")
     return _mempalace_client
+
+_lore_index = None
+_LORE_STOP = {
+    "今天", "昨天", "明天", "现在", "我们", "你们", "他们", "这个", "那个",
+    "什么", "怎么", "为什么", "不是", "没有", "一个", "一下", "可以", "知道",
+    "觉得", "还是", "然后", "就是", "因为", "所以", "如果", "已经", "自己",
+    "深空", "游戏", "猎人", "世界", "百科", "词条",
+}
+
+
+def _load_lore_index():
+    """读取深空百科标题索引。只在命中标题时召回，避免语义检索误配。"""
+    global _lore_index
+    if _lore_index is not None:
+        return _lore_index
+    lore_cfg = CONFIG.get("mempalace", {}).get("lore", {})
+    rel = lore_cfg.get("index_file", "temp/lysk_wiki_深空百科_entries.json")
+    path = Path(__file__).resolve().parent / rel
+    titles = []
+    try:
+        items = json.loads(path.read_text(encoding="utf-8"))
+        for item in items:
+            title = str(item.get("title", "")).strip()
+            if title:
+                titles.append(title)
+    except Exception as exc:
+        print(f"[MemPalace] Lore index unavailable: {exc}")
+    titles.sort(key=len, reverse=True)
+    _lore_index = titles
+    return _lore_index
+
+
+def _match_lore_titles(query: str, max_hits: int = 3):
+    text = (query or "").strip()
+    if not text:
+        return []
+    hits = []
+    occupied = [False] * len(text)
+    for title in _load_lore_index():
+        if len(title) <= 2 and title in _LORE_STOP:
+            continue
+        start = 0
+        while True:
+            pos = text.find(title, start)
+            if pos < 0:
+                break
+            end = pos + len(title)
+            if not any(occupied[pos:end]):
+                hits.append(title)
+                for i in range(pos, end):
+                    occupied[i] = True
+                break
+            start = pos + 1
+        if len(hits) >= max_hits:
+            break
+    return hits
+
+
+def _search_lore_sync(query: str) -> str:
+    """命中深空百科标题时，取对应原文；闲聊不注入。"""
+    mp_cfg = CONFIG.get("mempalace", {})
+    lore_cfg = mp_cfg.get("lore", {})
+    if not mp_cfg.get("enabled", True) or not lore_cfg.get("enabled", True):
+        return ""
+    max_hits = int(lore_cfg.get("max_hits", 3))
+    titles = _match_lore_titles(query, max_hits)
+    if not titles:
+        return ""
+    client = _get_mempalace_client()
+    if not client:
+        return ""
+    wing = lore_cfg.get("wing", "lore")
+    max_chars = int(lore_cfg.get("max_chars", 1600))
+    blocks = []
+    try:
+        for title in titles:
+            res = client.call_tool("mempalace_search", {
+                "query": f"【世界书】{title}",
+                "wing": wing,
+                "limit": 8,
+                "max_distance": 1.2,
+            })
+            if isinstance(res, dict) and res.get("status") == "error":
+                print(f"[MemPalace] Lore search error: {res.get('msg')}")
+                continue
+            data = json.loads(res) if isinstance(res, str) else res
+            chosen = ""
+            for item in data.get("results", []):
+                text = str(item.get("text", "")).strip()
+                if text.startswith(f"【世界书】{title}\n") or text.startswith(f"【世界书】{title}"):
+                    chosen = text
+                    break
+            if chosen:
+                blocks.append(chosen)
+        if not blocks:
+            return ""
+        body = "\n\n".join(blocks)
+        if len(body) > max_chars:
+            body = body[:max_chars].rstrip() + "\n…（词条已截断）"
+        return (
+            "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；"
+            "不要改写成新设定，不要把未命中的内容当成已知。\n" + body
+        )
+    except Exception as exc:
+        print(f"[MemPalace] Lore search exception: {exc}")
+        return ""
+
 
 def _search_mempalace_sync(query: str, wing: str = "xavier_api", limit: int = 3, max_distance: float = 0.85) -> str:
     """从 MemPalace 检索相关历史记忆"""
@@ -304,13 +425,15 @@ class ChatCompletionResponse(BaseModel):
 
 # ==================== 全局状态 ====================
 
-# API is a transport-only facade over the already-running desktop bridge.
-BRIDGE_URL = os.environ.get("GA_DESKTOP_BRIDGE_URL", "http://127.0.0.1:14168")
+# API owns its own GenericAgent process.  The desktop UI is a separate channel.
+# The fixed session file is used as the durable hand-off for Xavier short memory.
 BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-53138a368967")
 BRIDGE_SESSION_TITLE = "Xavier-chat"
+SESSION_FILE = script_dir / "temp" / "desktop_sessions" / f"{BRIDGE_SESSION_ID}.json"
+SESSION_LOCK_FILE = script_dir / "temp" / "desktop_sessions" / f"{BRIDGE_SESSION_ID}.api.lock"
 api_agent = None
 api_agent_thread = None
-api_lock = threading.Lock()  # 排队执行
+api_lock = threading.RLock()  # serialize turns in this API process
 confirmation_tokens: Dict[str, Dict] = {}  # 确认令牌缓存
 
 # ==================== 安全检查 ====================
@@ -374,13 +497,205 @@ def check_confirmation_token(messages: List[Message]) -> bool:
 
 # ==================== API 端点 ====================
 
+def _session_history_from_disk():
+    try:
+        with SESSION_FILE.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        return copy.deepcopy(data.get("llm_history") or [])
+    except FileNotFoundError:
+        return []
+    except Exception as exc:
+        print(f"[API] could not load Xavier session history: {exc}")
+        return []
+
+def _persist_api_history(history):
+    """Atomically update only llm_history, preserving desktop messages/metadata."""
+    SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
+    lock = None
+    try:
+        if fcntl:
+            lock = open(SESSION_LOCK_FILE, "a+", encoding="utf-8")
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+        data = {}
+        if SESSION_FILE.exists():
+            data = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+        data["llm_history"] = copy.deepcopy(history)
+        data["updated_at"] = time.time()
+        tmp = SESSION_FILE.with_suffix(SESSION_FILE.suffix + ".api.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, default=str), encoding="utf-8")
+        os.replace(tmp, SESSION_FILE)
+    finally:
+        if lock is not None:
+            fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+            lock.close()
+
+# API-only dialogue store. Never write the desktop/native session history.
+API_CHAT_FILE = script_dir / "temp" / "api_chat_history.json"
+
+
+def _dialogue_text(message):
+    content = message.get("content", "")
+    if isinstance(content, str):
+        return content
+    return "\n".join(b.get("text", "") for b in content
+                     if isinstance(b, dict) and b.get("type") == "text")
+
+
+def _clean_chat_reply(text):
+    # Unwrap only the known final-answer envelope, not arbitrary JSON prose.
+    value = strip_final_info_marker(text)
+    value = re.sub(r"(?is)<summary\b[^>]*>.*?</summary>", "", value).strip()
+    try:
+        envelope = json.loads(value)
+        if isinstance(envelope, dict) and isinstance(envelope.get("content"), str):
+            value = envelope["content"]
+    except (ValueError, TypeError):
+        pass
+    value = _clean_api_response(value)
+    # Remove only a leading history metadata header, never timestamps in prose.
+    value = re.sub(r"^\s*\[(?:时间未知（旧记录）|\d{4}-\d{2}-\d{2}[T ][^\]\n]+)\]\s*", "", value)
+    value = re.sub(r"^\s*(?:【\.[^\n]*?\.】|【来源未标记】)\s*", "", value)
+    return value.strip()
+
+
+def _dialogue_record(role, text, source="", timestamp=None):
+    # Preserve old timestamps; never invent dates for imported conversation.
+    match = re.match(r"^\[(\d{4}-\d{2}-\d{2}[^] ]*(?: [^]]+)?)\]\s*", text)
+    if match:
+        timestamp = match.group(1)
+        text = text[match.end():]
+    marker = _extract_platform_marker(text)
+    if marker:
+        source = marker
+        text = text.replace(marker, "", 1).lstrip()
+    return {"role": role, "content": text, "source": source,
+            "timestamp": timestamp}
+
+
+def _load_api_dialogue():
+    if API_CHAT_FILE.exists():
+        return json.loads(API_CHAT_FILE.read_text(encoding="utf-8"))["messages"]
+    # One-time read-only import. Do not follow temporary prompt file pointers.
+    records, pending, answer = [], None, None
+    def flush():
+        if pending and answer:
+            records.extend([pending, _dialogue_record("assistant", answer, pending["source"])])
+    for message in _session_history_from_disk():
+        role, text = message.get("role"), _dialogue_text(message).strip()
+        blocks = message.get("content", [])
+        if isinstance(blocks, list) and any(
+                isinstance(b, dict) and b.get("type") in ("tool_use", "tool_result")
+                for b in blocks):
+            continue
+        if role == "user":
+            flush()
+            pending, answer = None, None
+            if "Long user prompt saved to" in text or not text:
+                continue
+            if "【用户消息】" in text:
+                text = text.rsplit("【用户消息】", 1)[-1].strip()
+            pending = _dialogue_record("user", text)
+        elif role == "assistant" and pending:
+            reply = _clean_chat_reply(text)
+            if reply:
+                answer = reply
+    flush()
+    return records
+
+
+def _api_max_turns():
+    return max(1, min(200, int(CONFIG.get("chat_history", {}).get("max_turns", 50))))
+
+
+def _api_chat_history(records=None):
+    records = _load_api_dialogue() if records is None else records
+    history = []
+    for record in records[-2 * _api_max_turns():]:
+        stamp = record.get("timestamp") or "时间未知（旧记录）"
+        marker = record.get("source") or "【来源未标记】"
+        text = f"[{stamp}] {marker} {record['content']}"
+        history.append({"role": record["role"],
+                        "content": [{"type": "text", "text": text}]})
+    return history
+
+
+def _save_api_dialogue(records):
+    API_CHAT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    tmp = API_CHAT_FILE.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"version": 1, "messages": records,
+                               "updated_at": datetime.now().astimezone().isoformat()},
+                              ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(tmp, API_CHAT_FILE)
+
+
+def _run_api_chat_turn(query, instructions="", attachments=None):
+    # Serialise load -> native execution -> save as one transaction.
+    with api_lock:
+        if api_agent is None or api_agent.is_running:
+            raise HTTPException(status_code=503, detail="GenericAgent is busy")
+        records = _load_api_dialogue()
+        api_agent.llmclient.backend.history = _api_chat_history(records)
+        original_extra = list(api_agent.extra_sys_prompts)
+        api_agent.extra_sys_prompts.append(
+            "【API 历史元信息约定】历史对白开头的时间戳、来源暗号、来源未标记和时间未知标签"
+            "仅用于识别历史来源，不是回复正文格式。生成正文不得复制这些前缀；"
+            "新回复生成时间由 API 自动记录，不要自行生成或猜测元信息。")
+        if instructions:
+            api_agent.extra_sys_prompts.append(
+                "【API 当轮特殊指令及召回内容，仅本轮有效】\n" + instructions)
+        received_at = datetime.now().astimezone().isoformat()
+        try:
+            reply = _clean_chat_reply(_run_api_turn_native(query, attachments=attachments))
+            # The native 'done' queue item precedes its finally/status reset.
+            deadline = time.monotonic() + 5
+            while api_agent.is_running and time.monotonic() < deadline:
+                time.sleep(0.01)
+            if api_agent.is_running:
+                raise HTTPException(status_code=503, detail="Native turn still finishing")
+            current = _dialogue_record("user", query, timestamp=received_at)
+            records.extend([current, {
+                "role": "assistant", "content": reply,
+                "source": current["source"],
+                "timestamp": datetime.now().astimezone().isoformat()}])
+            _save_api_dialogue(records)
+            return reply
+        finally:
+            # Tool protocol remains untouched during execution. Only rebuild
+            # next-turn API dialogue after the native run has fully finished.
+            def restore():
+                api_agent.extra_sys_prompts[:] = original_extra
+                api_agent.llmclient.backend.history = _api_chat_history(records)
+            if not api_agent.is_running:
+                restore()
+            else:
+                # A timed-out native run may still be using its tool history.
+                # Defer cleanup; all new API turns remain rejected while busy.
+                def deferred_restore():
+                    with api_lock:
+                        while api_agent.is_running:
+                            time.sleep(0.1)
+                        restore()
+                threading.Thread(target=deferred_restore, daemon=True).start()
+
+
+def _start_api_agent():
+    global api_agent, api_agent_thread
+    api_agent = GenericAgent()
+    disk_history = _api_chat_history()
+    if api_agent.llmclient is not None:
+        api_agent.llmclient.backend.history = disk_history
+    api_agent.no_print = True
+    api_agent.inc_out = False
+    api_agent_thread = threading.Thread(target=api_agent.run, name="ga-api-agent", daemon=True)
+    api_agent_thread.start()
+    print(f"   Independent GenericAgent started; Xavier session={BRIDGE_SESSION_ID}, history={len(disk_history)}")
+
 @asynccontextmanager
 async def lifespan(app):
-    """Attach to the desktop bridge; never create or restore a GA instance."""
-    print("🚀 Starting transport API for existing desktop session...")
-    print(f"   Bridge: {BRIDGE_URL}  Session: {BRIDGE_SESSION_TITLE} ({BRIDGE_SESSION_ID})")
+    """Start the official GenericAgent directly; desktop UI is not required."""
+    _start_api_agent()
     yield
-    print("🛑 Shutting down transport API (desktop GA remains running)...")
+    print("🛑 Shutting down independent API GenericAgent...")
 
 app = FastAPI(
     title="GenericAgent API",
@@ -418,12 +733,15 @@ async def auth_middleware(request: Request, call_next):
 
 @app.get("/health")
 async def health_check():
-    """健康检查"""
+    """独立 API 健康检查；不探测也不依赖桌面 Bridge。"""
     return {
         "status": "ok",
-        "agent_running": True,
-        "bridge": BRIDGE_URL,
-        "session": BRIDGE_SESSION_TITLE
+        "agent_running": bool(api_agent and getattr(api_agent, "handler", None)),
+        "agent_busy": bool(api_agent and api_agent.is_running),
+        "transport": "independent_genericagent",
+        "session": BRIDGE_SESSION_ID,
+        "history_file": str(API_CHAT_FILE),
+        "chat_history_max_turns": _api_max_turns(),
     }
 
 @app.get("/v1/models")
@@ -546,11 +864,35 @@ def _clean_api_response(text: str) -> str:
     # 与桌面端 splitContentTurnSegs 同源：只取最后一个轮次。
     parts = re.split(r'\**LLM Running \(Turn \d+\) \.\.\.\**', value, flags=re.IGNORECASE)
     value = (parts[-1] if parts else value)
-    # 删除轮摘要，以及工具调用/结果/思考协议块；这些只属于桌面端折叠展示层。
-    value = re.sub(r'<summary>[\s\S]*?</summary>\s*', '', value, flags=re.IGNORECASE)
-    value = re.sub(r'<thinking>[\s\S]*?</thinking>\s*', '', value, flags=re.IGNORECASE)
-    value = re.sub(r'<function_calls>[\s\S]*?</function_calls>\s*', '', value, flags=re.IGNORECASE)
-    value = re.sub(r'<function_results>[\s\S]*?</function_results>\s*', '', value, flags=re.IGNORECASE)
+    # 只处理对外文本，不改变 Agent 执行/历史/附件。嵌套及未闭合块均保守隐藏。
+    hidden_tags = (
+        r'summary|think|thinking|thought|analysis|reasoning|reasoning_content|'
+        r'function_calls?|function_results?|tool_calls?|tool_results?'
+    )
+    token_re = re.compile(
+        rf'<\s*(/?)\s*({hidden_tags})\b[^>]*>', re.IGNORECASE
+    )
+    chunks, stack, cursor = [], [], 0
+    for match in token_re.finditer(value):
+        if not stack:
+            chunks.append(value[cursor:match.start()])
+        name = match.group(2).lower()
+        if match.group(1):
+            if name in stack:
+                # 异常嵌套也不提前释放外层隐藏区。
+                index = len(stack) - 1 - stack[::-1].index(name)
+                del stack[index:]
+        elif not re.search(r'/\s*>$', match.group(0)):
+            stack.append(name)
+        cursor = match.end()
+    if not stack:
+        chunks.append(value[cursor:])
+    value = ''.join(chunks)
+    # 截断在标签本身中间时，不将协议碎片交付客户端。
+    value = re.sub(
+        rf'<\s*/?\s*(?:{hidden_tags})\b[^>]*\Z', '', value,
+        flags=re.IGNORECASE,
+    )
     # 兼容 GA 文本化协议块：🛠️ Tool / Tool Result 到下一段正文前均隐藏。
     value = re.sub(r'(?ims)^\s*(?:🛠️\s*)?(?:Tool|工具)\s*:.*?(?=\n\s*\n|\Z)', '', value)
     value = re.sub(r'(?ims)^\s*(?:🛠️\s*)?(?:Tool Result|工具结果)\s*:.*?(?=\n\s*\n|\Z)', '', value)
@@ -592,13 +934,13 @@ def _chat_request_instructions(request):
     # 2. Extract from messages array (Chatbox style: first system message)
     if request.messages:
         for msg in request.messages:
-            if msg.role == "system":
+            if msg.role in ("system", "developer"):
                 text = _text_content(msg.content)
                 if text.strip():
                     values.append(text)
                     if not platform_marker:
                         platform_marker = _extract_platform_marker(text)
-                break  # Only take the first system message
+                # Keep every system/developer instruction for this turn only.
     
     full_instructions = "\n".join(values)
     return full_instructions, platform_marker
@@ -631,42 +973,52 @@ def _bridge_messages(after=0):
     return _bridge_json("GET", f"/session/{BRIDGE_SESSION_ID}/messages?after={after}&limit=200", timeout=30)
 
 
-def _run_api_turn(query, initial_user_content=None, attachments=None):
-    """Submit untouched content to desktop_bridge and return its native assistant text."""
+def _run_api_turn_native(query, initial_user_content=None, attachments=None):
+    """Run one turn on the official GenericAgent without contacting desktop Bridge."""
+    global api_agent
     with api_lock:
-        before = _bridge_messages(0)
-        baseline = int(before.get("msgSeq", 0) or 0)
-        body = {"prompt": initial_user_content if initial_user_content is not None else query}
-        # These are transport fields only. The desktop bridge/GA owns all decoding.
-        if attachments:
-            body.update(attachments)
-        
-        # DEBUG: 打印实际发送的内容
-        print(f"[_run_api_turn] DEBUG prompt content (first 150 chars): {body['prompt'][:150]}")
-        if 'display' in body:
-            print(f"[_run_api_turn] DEBUG display field (first 100 chars): {body['display'][:100]}")
-        
-        # Try to submit prompt; if bridge returns 500 (BrokenPipeError from stderr),
-        # don't fail immediately — the turn itself will complete, we just poll for the reply.
-        try:
-            _bridge_json("POST", f"/session/{BRIDGE_SESSION_ID}/prompt", body, timeout=60)
-        except HTTPException as exc:
-            if exc.status_code == 502 and "HTTP 500" in str(exc.detail):
-                print(f"[API] Bridge returned 500 (likely BrokenPipeError), continuing to poll for reply...")
-            else:
-                raise
-        
-        deadline = time.time() + 300
+        if api_agent is None:
+            raise HTTPException(status_code=503, detail="GenericAgent is not ready")
+        prompt = initial_user_content if initial_user_content is not None else query
+        print(f"[_run_api_turn] independent GenericAgent prompt (first 150 chars): {str(prompt)[:150]}")
+        # 只读快照，避免异常结束时误取上一轮回复。
+        before_history = api_agent.llmclient.backend.history
+        previous_last = before_history[-1] if before_history else None
+        outq = api_agent.put_task(prompt, source="api")
+        deadline = time.time() + 600
+        full = ""
         while time.time() < deadline:
-            time.sleep(0.5)
-            state = _bridge_messages(baseline)
-            for msg in state.get("messages", []):
-                if msg.get("role") == "assistant" and int(msg.get("id", 0) or 0) > baseline:
-                    content = msg.get("content", "")
-                    return _text_content(content) if not isinstance(content, str) else content
-            if state.get("status") in ("error", "failed"):
-                raise HTTPException(status_code=502, detail=state.get("lastError") or "desktop GA turn failed")
-        raise HTTPException(status_code=504, detail="desktop GA response timeout")
+            try:
+                item = outq.get(timeout=1.0)
+            except queue.Empty:
+                continue
+            if item.get("next"):
+                full += str(item["next"])
+            if "done" in item:
+                done = item.get("done") or full
+                # done is authoritative; next chunks may be cumulative or incremental.
+                if done:
+                    full = str(done)
+                # 原生流可能将 thinking_delta 无标签拼入 done；只在本轮
+                # 最终消息确有结构化思考块时改用 text 块，绝不修改历史。
+                history = api_agent.llmclient.backend.history
+                last = history[-1] if history else None
+                if (isinstance(last, dict) and last is not previous_last
+                        and last.get("role") == "assistant"):
+                    blocks = last.get("content")
+                    if isinstance(blocks, list) and any(
+                        isinstance(b, dict) and b.get("type") in
+                        ("thinking", "redacted_thinking", "reasoning")
+                        for b in blocks
+                    ):
+                        full = "".join(
+                            b.get("text", "") for b in blocks
+                            if isinstance(b, dict) and b.get("type") == "text"
+                            and isinstance(b.get("text"), str)
+                        )
+                        print("[API] Structured final text selected; thinking excluded")
+                return strip_final_info_marker(full)
+        raise HTTPException(status_code=504, detail="GenericAgent response timeout")
 
 
 async def _execute_api_turn(query, messages, instructions="", attachments=None):
@@ -689,21 +1041,20 @@ async def _execute_api_turn(query, messages, instructions="", attachments=None):
             instruction_text = mp_context
         print(f"[_execute_api_turn] Injected MemPalace memories into instructions")
 
-    agent_prompt = query
-    if instruction_text:
-        agent_prompt = (
-            "【第三方平台指令，仅本轮有效】\n"
-            f"{instruction_text}\n"
-            "【用户消息】\n"
-            f"{query}"
-        )
-        # Keep the Xavier-chat bubble as the user-facing text, never the PR body.
-        if not str(attachments.get("display") or "").strip():
-            attachments["display"] = query
-        print(f"[_execute_api_turn] Injected platform instructions ({len(instruction_text)}ch) into agent prompt")
-    
-    reply = await asyncio.to_thread(_run_api_turn, agent_prompt, None, attachments)
-    
+    # 仅扫描用户原文；命中深空百科标题才追加词条，闲聊不注入。
+    lore_query = "\n".join(
+        str(getattr(m, "content", "") or "")
+        for m in messages if getattr(m, "role", "") == "user"
+    )
+    lore_text = _search_lore_sync(lore_query)
+    if lore_text:
+        instruction_text = f"{instruction_text}\n\n{lore_text}".strip()
+        print(f"[_execute_api_turn] Injected lore worldbook ({len(lore_text)}ch)")
+
+    reply = await asyncio.to_thread(
+        _run_api_chat_turn, query, instruction_text, attachments
+    )
+
     # 将本次对话异步全量写入 MemPalace
     _save_turn_to_mempalace_async(query, reply)
     
