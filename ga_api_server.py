@@ -558,16 +558,111 @@ def _clean_chat_reply(text):
     return value.strip()
 
 
+def _is_json_dict_string(s):
+    if not isinstance(s, str):
+        return False
+    s_trimmed = s.strip()
+    if s_trimmed.startswith("{") and s_trimmed.endswith("}"):
+        try:
+            val = json.loads(s_trimmed)
+            return isinstance(val, dict)
+        except Exception:
+            return False
+    return False
+
+
+def _extract_wechat_record_info(text, default_timestamp=None):
+    """
+    Extracts clean conversation content, platform source tag, and timestamp from WeChat prompts.
+    Returns (clean_text, source_marker, timestamp) or None if not a recognized WeChat prompt.
+    """
+    if "这是沈星回和言言的微信私聊" in text or ("微信私聊" in text and "微信号：" in text):
+        src = "【.微信私聊.】"
+        target_part = ""
+        if "需要综合回复的新消息：" in text:
+            target_part = text.split("需要综合回复的新消息：", 1)[1]
+        elif "【新消息】" in text:
+            target_part = text.split("【新消息】", 1)[1]
+        else:
+            target_part = text
+
+        lines = [l.strip() for l in target_part.splitlines() if l.strip()]
+        valid_lines = []
+        msg_ts = None
+        for l in lines:
+            if l.startswith("只输出严格") or l.startswith("历史背景") or l.startswith("【历史"):
+                break
+            m_full = re.search(r"(?:\[(\d{1,2}:\d{2}(?::\d{2})?)\])?\s*(?:【来源微信私聊：([^｜]+).*?】)?\s*(.*)", l)
+            if m_full:
+                t_str, nick, body = m_full.group(1), m_full.group(2), m_full.group(3).strip()
+                if t_str and not msg_ts:
+                    msg_ts = t_str
+                speaker = nick.strip() if nick else "言言"
+                if body and not body.startswith("只输出严格"):
+                    valid_lines.append(f"{speaker}: {body}")
+            else:
+                if not l.startswith("【") and not l.startswith("只输出严格"):
+                    valid_lines.append(l)
+
+        content = "\n".join(valid_lines) if valid_lines else target_part[:300].strip()
+        ts = msg_ts or default_timestamp
+        return content, src, ts
+
+    if "来源微信群：" in text or "眼前的群聊，是你和大家身处的公共空间" in text or "现在已经处于高频互动中" in text:
+        m_group = re.search(r"来源微信群：([^｜|\n]+)", text)
+        group_name = m_group.group(1).strip() if m_group else ""
+        src = f"【.微信群聊·{group_name}.】" if group_name else "【.微信群聊.】"
+
+        target_part = ""
+        if "需要回复的新消息：" in text:
+            target_part = text.split("需要回复的新消息：", 1)[1]
+        elif "【新消息】" in text:
+            target_part = text.split("【新消息】", 1)[1]
+        elif "【最近消息】" in text:
+            target_part = text.split("【最近消息】", 1)[1]
+        else:
+            target_part = text
+
+        lines = [l.strip() for l in target_part.splitlines() if l.strip()]
+        valid_lines = []
+        msg_ts = None
+        for l in lines:
+            if l.startswith("只输出严格") or l.startswith("历史背景") or l.startswith("可回应的群成员"):
+                break
+            m_full = re.search(r"(?:\[(\d{1,2}:\d{2}(?::\d{2})?)\])?\s*(?:【[^】]*群昵称：([^｜]+)[^】]*】)?\s*(.*)", l)
+            if m_full:
+                t_str, nick, body = m_full.group(1), m_full.group(2), m_full.group(3).strip()
+                if t_str and not msg_ts:
+                    msg_ts = t_str
+                if nick and body:
+                    valid_lines.append(f"{nick.strip()}: {body}")
+                elif body and not body.startswith("只输出严格"):
+                    valid_lines.append(body)
+            else:
+                if not l.startswith("【") and not l.startswith("只输出严格"):
+                    valid_lines.append(l)
+
+        content = "\n".join(valid_lines) if valid_lines else target_part[:300].strip()
+        ts = msg_ts or default_timestamp
+        return content, src, ts
+
+    return None
+
+
 def _dialogue_record(role, text, source="", timestamp=None):
     # Preserve old timestamps; never invent dates for imported conversation.
-    match = re.match(r"^\[(\d{4}-\d{2}-\d{2}[^] ]*(?: [^]]+)?)\]\s*", text)
-    if match:
-        timestamp = match.group(1)
-        text = text[match.end():]
-    marker = _extract_platform_marker(text)
-    if marker:
-        source = marker
-        text = text.replace(marker, "", 1).lstrip()
+    wechat_info = _extract_wechat_record_info(text, timestamp)
+    if wechat_info:
+        text, source, timestamp = wechat_info
+    else:
+        match = re.match(r"^\[(\d{4}-\d{2}-\d{2}[^] ]*(?: [^]]+)?)\]\s*", text)
+        if match:
+            timestamp = match.group(1)
+            text = text[match.end():]
+        marker = _extract_platform_marker(text)
+        if marker:
+            source = marker
+            text = text.replace(marker, "", 1).lstrip()
     return {"role": role, "content": text, "source": source,
             "timestamp": timestamp}
 
@@ -645,20 +740,36 @@ def _run_api_chat_turn(query, instructions="", attachments=None):
                 "【API 当轮特殊指令及召回内容，仅本轮有效】\n" + instructions)
         received_at = datetime.now().astimezone().isoformat()
         try:
-            reply = _clean_chat_reply(_run_api_turn_native(query, attachments=attachments))
+            raw_reply = _run_api_turn_native(query, attachments=attachments)
+            reply = _clean_chat_reply(raw_reply)
             # The native 'done' queue item precedes its finally/status reset.
             deadline = time.monotonic() + 5
             while api_agent.is_running and time.monotonic() < deadline:
                 time.sleep(0.01)
             if api_agent.is_running:
                 raise HTTPException(status_code=503, detail="Native turn still finishing")
-            current = _dialogue_record("user", query, timestamp=received_at)
-            records.extend([current, {
-                "role": "assistant", "content": reply,
-                "source": current["source"],
-                "timestamp": datetime.now().astimezone().isoformat()}])
-            _save_api_dialogue(records)
-            return reply
+            
+            # Check if this turn resulted in an empty reply or negative group decision
+            # e.g. {"continue": false, "content": ""}
+            is_silent = not reply.strip()
+            if not is_silent:
+                try:
+                    parsed_json = json.loads(reply)
+                    if isinstance(parsed_json, dict) and not str(parsed_json.get("content", "")).strip():
+                        is_silent = True
+                except (ValueError, TypeError):
+                    pass
+
+            if not is_silent:
+                current = _dialogue_record("user", query, timestamp=received_at)
+                records.extend([current, {
+                    "role": "assistant", "content": reply,
+                    "source": current["source"],
+                    "timestamp": datetime.now().astimezone().isoformat()}])
+                _save_api_dialogue(records)
+            else:
+                print(f"[_run_api_chat_turn] Silent turn or empty response; not recording to persistent history.")
+            return raw_reply if _is_json_dict_string(raw_reply) else reply
         finally:
             # Tool protocol remains untouched during execution. Only rebuild
             # next-turn API dialogue after the native run has fully finished.

@@ -37,6 +37,13 @@
     "enabled": true,
     "wing": "xavier_api",
     "search_limit": 3,
-    "max_distance": 0.85
+    "max_distance": 0.85,
+    "lore": {
+      "enabled": true,
+      "wing": "lore",
+      "max_hits": 3,
+      "max_chars": 1600,
+      "index_file": "temp/lysk_wiki_深空百科_entries.json"
+    }
   }
 }
