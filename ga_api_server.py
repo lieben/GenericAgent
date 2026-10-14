@@ -166,6 +166,54 @@ def _match_lore_titles(query: str, max_hits: int = 3):
     return hits
 
 
+def _extract_lore_search_query(messages, default_query: str = "") -> str:
+    """从输入消息中精确提取用于百科召回的真实用户发言正文。
+    严禁将人设提示词、群规、群友昵称、时间戳、引用前缀扫描进百科匹配池。
+    """
+    raw_texts = []
+    for m in messages or []:
+        if getattr(m, "role", "") == "user":
+            content = str(getattr(m, "content", "") or "")
+            if content.strip():
+                raw_texts.append(content)
+    if not raw_texts and default_query:
+        raw_texts.append(default_query)
+    if not raw_texts:
+        return ""
+
+    # 取最新的一条用户发言进行提取
+    latest_text = raw_texts[-1]
+
+    # 如果是群聊/私聊包装格式，精确定位到真实的新消息正文
+    if "需要回复的新消息：" in latest_text:
+        target = latest_text.split("需要回复的新消息：", 1)[1]
+    elif "【新消息】" in latest_text:
+        target = latest_text.split("【新消息】", 1)[1]
+    elif "【最近消息】" in latest_text:
+        target = latest_text.split("【最近消息】", 1)[1]
+    else:
+        target = latest_text
+
+    cleaned_lines = []
+    for line in target.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        # 遇到后续的系统要求、边界提示或尾部限制直接截断
+        if line.startswith("只输出严格") or line.startswith("可回应的群成员") or line.startswith("历史背景"):
+            break
+        # 剥离时间戳 [23:12] 或 [2026-10-11 ...]
+        line = re.sub(r"^\[\d{1,2}:\d{2}(?::\d{2})?\]\s*", "", line)
+        line = re.sub(r"^\[\d{4}-\d{2}-\d{2}[^\]]*\]\s*", "", line)
+        # 剥离来源、UID、群昵称等元数据 【来源微信群：...｜群昵称：...】
+        line = re.sub(r"【[^】]*】", "", line)
+        line = line.strip()
+        if line:
+            cleaned_lines.append(line)
+
+    return "\n".join(cleaned_lines).strip()
+
+
 def _search_lore_sync(query: str) -> str:
     """命中深空百科标题时，取对应原文；闲聊不注入。"""
     mp_cfg = CONFIG.get("mempalace", {})
@@ -734,7 +782,9 @@ def _run_api_chat_turn(query, instructions="", attachments=None):
         api_agent.extra_sys_prompts.append(
             "【API 历史元信息约定】历史对白开头的时间戳、来源暗号、来源未标记和时间未知标签"
             "仅用于识别历史来源，不是回复正文格式。生成正文不得复制这些前缀；"
-            "新回复生成时间由 API 自动记录，不要自行生成或猜测元信息。")
+            "新回复生成时间由 API 自动记录，不要自行生成或猜测元信息。\n"
+            "【沉浸第一人称约定】沈星回与言言对话交流或自称时，必须始终使用第一人称“我”，"
+            "严禁在对白中以第三人称“沈星回”称呼自己（如严禁出现“沈星回就在旁边”、“沈星回觉得”等）。")
         if instructions:
             api_agent.extra_sys_prompts.append(
                 "【API 当轮特殊指令及召回内容，仅本轮有效】\n" + instructions)
@@ -1152,11 +1202,8 @@ async def _execute_api_turn(query, messages, instructions="", attachments=None):
             instruction_text = mp_context
         print(f"[_execute_api_turn] Injected MemPalace memories into instructions")
 
-    # 仅扫描用户原文；命中深空百科标题才追加词条，闲聊不注入。
-    lore_query = "\n".join(
-        str(getattr(m, "content", "") or "")
-        for m in messages if getattr(m, "role", "") == "user"
-    )
+    # 仅扫描真实用户发言正文；命中深空百科标题才追加词条，闲聊或人设规则不注入。
+    lore_query = _extract_lore_search_query(messages, default_query=query)
     lore_text = _search_lore_sync(lore_query)
     if lore_text:
         instruction_text = f"{instruction_text}\n\n{lore_text}".strip()
