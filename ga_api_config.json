@@ -33,6 +33,9 @@
       "格式化"
     ]
   },
+  "chat_history": {
+    "max_turns": 30
+  },
   "mempalace": {
     "enabled": true,
     "wing": "xavier_api",

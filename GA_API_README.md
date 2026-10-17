@@ -112,11 +112,26 @@ curl -N http://localhost:1016/v1/chat/completions \
   },
   "safety": {
     "dangerous_operations_require_confirm": false
+  },
+  "chat_history": {
+    "max_turns": 30
   }
 }
 ```
 
 改端口、模型名或鉴权，只改这份配置，不要改 `ga_api_server.py`。`dangerous_operations_require_confirm` 已关闭：Chatbox / 微信私聊走 1016 就是全工具，运输层不再拦「删除」这类词。群聊限制在 `wechat_group_monitor` 插件层。改这项后必须重启 1016。
+
+### 配置项维护约定
+
+- `ga_api_config.json` 是运行参数的唯一来源；凡是应由部署者调整的值，必须作为配置项读取，不得在业务逻辑中另设常量、隐式默认值或回退值。
+- 每个配置项都要在本文档说明键名、用途、类型及必填性，并在配置文件中提供实际值；新增配置时同步更新文档和配置校验。
+- 必填配置缺失、类型错误或超出约束时，应在启动/使用时明确报错，不得静默采用代码默认值。
+- 测试应覆盖配置值确实被读取，以及必填配置缺失/非法时失败；改配置后重启服务并用无副作用端点验证。
+
+### 历史窗口
+
+`chat_history.max_turns`（正整数，必填）控制共享对白历史传入模型的轮数。当前部署值为 `30`；该数值只保存在 `ga_api_config.json`，代码不提供默认值。
+
 
 ## 集成到其他平台
 

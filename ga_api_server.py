@@ -68,7 +68,6 @@ DEFAULT_CONFIG = {
             "kill -9", "pkill", "删除", "清空", "格式化"
         ]
     },
-    "chat_history": {"max_turns": 50},
     "mempalace": {
         "enabled": True,
         "wing": "xavier_api",
@@ -747,7 +746,14 @@ def _load_api_dialogue():
 
 
 def _api_max_turns():
-    return max(1, min(200, int(CONFIG.get("chat_history", {}).get("max_turns", 50))))
+    try:
+        value = CONFIG["chat_history"]["max_turns"]
+        turns = int(value)
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeError("Configure chat_history.max_turns in ga_api_config.json") from exc
+    if turns < 1:
+        raise RuntimeError("chat_history.max_turns must be a positive integer")
+    return turns
 
 
 def _api_chat_history(records=None):
