@@ -171,3 +171,12 @@ plugins/wechat_*_monitor/*_state.json
 plugins/wechat_*_monitor/*_state*.json
 plugins/wechat_*_monitor/*.bak*
 plugins/wechat_*_monitor/*backup*
+
+# 微信监控 SOP（固定已验证规范）
+!memory/wechat_private_monitor_sop.md
+!memory/wechat_group_monitor_sop.md
+
+# Win176 微信服务固定副本（运行宿主=Win176，非 Mac）
+!wechat/
+!wechat/win176/
+!wechat/win176/**

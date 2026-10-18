@@ -624,7 +624,10 @@ def _extract_wechat_record_info(text, default_timestamp=None):
     Returns (clean_text, source_marker, timestamp) or None if not a recognized WeChat prompt.
     """
     if "这是沈星回和言言的微信私聊" in text or ("微信私聊" in text and "微信号：" in text):
-        src = "【.微信私聊.】"
+        # Source marker is authored by the WeChat private-chat service and travels
+        # inside the prompt as a 【.xxx.】 tag; GA only extracts it (never hardcodes).
+        m_src = re.search(r"【\.([^】\n]*?)\.】", text)
+        src = f"【.{m_src.group(1)}.】" if m_src else "【.微信私聊.】"
         target_part = ""
         if "需要综合回复的新消息：" in text:
             target_part = text.split("需要综合回复的新消息：", 1)[1]
@@ -1147,11 +1150,27 @@ def _run_api_turn_native(query, initial_user_content=None, attachments=None):
         if api_agent is None:
             raise HTTPException(status_code=503, detail="GenericAgent is not ready")
         prompt = initial_user_content if initial_user_content is not None else query
-        print(f"[_run_api_turn] independent GenericAgent prompt (first 150 chars): {str(prompt)[:150]}")
+        # Collect attached images (materialized local paths) into data URLs so the
+        # native GA turn can feed them to the multimodal model. Without this the
+        # image blocks are silently dropped before reaching the LLM client.
+        turn_images = []
+        if isinstance(attachments, dict):
+            for meta in (attachments.get("imageMetas") or []):
+                path = meta.get("path") if isinstance(meta, dict) else meta
+                if not isinstance(path, str) or not path:
+                    continue
+                try:
+                    with open(path, "rb") as fh:
+                        raw = fh.read()
+                    mime = mimetypes.guess_type(path)[0] or "image/png"
+                    turn_images.append(f"data:{mime};base64," + base64.b64encode(raw).decode())
+                except Exception as exc:
+                    print(f"[_run_api_turn] image attach failed for {path}: {exc}")
+        print(f"[_run_api_turn] independent GenericAgent prompt (first 150 chars): {str(prompt)[:150]} (images={len(turn_images)})")
         # 只读快照，避免异常结束时误取上一轮回复。
         before_history = api_agent.llmclient.backend.history
         previous_last = before_history[-1] if before_history else None
-        outq = api_agent.put_task(prompt, source="api")
+        outq = api_agent.put_task(prompt, source="api", images=turn_images)
         deadline = time.time() + 600
         full = ""
         while time.time() < deadline:
