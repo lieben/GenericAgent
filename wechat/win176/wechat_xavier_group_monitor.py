@@ -530,6 +530,19 @@ def load_group_member_facts(context_text, nicks):
     return "\n\n".join(matched)
 
 
+def _detect_llm_command(new_items):
+    """本轮新消息若恰为单条纯 /llm 命令（无图片/附件），返回该命令文本，否则返回 ""。"""
+    if not new_items or len(new_items) != 1:
+        return ""
+    item = new_items[0]
+    if item.get("is_image") or item.get("media_path"):
+        return ""
+    text = str(item.get("text") or "").strip()
+    if re.fullmatch(r"/llm(\s+\d+)?", text):
+        return text
+    return ""
+
+
 def xavier(history_items, new_items, group, gid, state, autonomous=False):
     """Generate a reply; Flash starts, Xavier owns continuation while hot."""
     global xavier_last_reason
@@ -539,6 +552,17 @@ def xavier(history_items, new_items, group, gid, state, autonomous=False):
     if not new_items:
         xavier_last_reason = "no_new_messages"
         return []
+    # --- /llm 命令直通：本轮若恰为单条纯 /llm 命令，直接发给 GA API 命令分支 ---
+    _llm_cmd = _detect_llm_command(new_items)
+    if _llm_cmd:
+        try:
+            _out = call_openai(url, model, [{"role": "user", "content": _llm_cmd}], api_key=key)
+            _out = str(_out or "").strip()
+            xavier_last_reason = "llm_command"
+            return [_out] if _out else []
+        except Exception as _e:
+            xavier_last_reason = f"llm_command_error: {type(_e).__name__}"
+            return []
 
     uid_map = {x['uid']: x['nickname'] for x in items if x.get('uid') and not x.get('is_self')}
     people = "\n".join(f"- uid={uid}，群昵称={nick}" for uid, nick in uid_map.items())
@@ -831,7 +855,11 @@ def run_once(state, due_gids=None):
         latest_keys={x["key"] for x in latest}
         history_only=[x for x in hist if x["key"] not in latest_keys][-WINDOW:]
         history_only=[x for x in history_only if not polluted_history_text(x.get("text"))]
-        decision={"participate": True, "reason": "high_frequency_xavier_autonomy"} if already_hot else flash_decide(history_only, latest)
+        # /llm 命令：跳过 Flash 参与判断，直接交给 xavier 直通
+        if _detect_llm_command(latest):
+            decision={"participate": True, "reason": "llm_command"}
+        else:
+            decision={"participate": True, "reason": "high_frequency_xavier_autonomy"} if already_hot else flash_decide(history_only, latest)
         participate=already_hot or bool(decision.get("participate",False))
         # When quiet mode is approved by Flash, inspect only the two most recent
         # images before Xavier's first reply.  Flash itself still receives no
