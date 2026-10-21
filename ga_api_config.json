@@ -46,7 +46,12 @@
       "wing": "lore",
       "max_hits": 3,
       "max_chars": 1600,
-      "index_file": "temp/lysk_wiki_深空百科_entries.json"
+      "index_file": "temp/lysk_wiki_深空百科_entries.json",
+      "recall_header": "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。"
     }
+  },
+  "identity": {
+    "self_nickname": "沈星回",
+    "special_nickname": "搭档"
   }
 }

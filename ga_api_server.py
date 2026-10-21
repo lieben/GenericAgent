@@ -68,6 +68,10 @@ DEFAULT_CONFIG = {
             "kill -9", "pkill", "删除", "清空", "格式化"
         ]
     },
+    "identity": {
+        "self_nickname": "沈星回",
+        "special_nickname": "搭档"
+    },
     "mempalace": {
         "enabled": True,
         "wing": "xavier_api",
@@ -78,7 +82,8 @@ DEFAULT_CONFIG = {
             "wing": "lore",
             "max_hits": 3,
             "max_chars": 1600,
-            "index_file": "temp/lysk_wiki_深空百科_entries.json"
+            "index_file": "temp/lysk_wiki_深空百科_entries.json",
+            "recall_header": "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。"
         }
     }
 }
@@ -93,6 +98,15 @@ def load_config():
         return json.load(f)
 
 CONFIG = load_config()
+
+
+def _identity_names():
+    """读取身份昵称配置：self_nickname=AI 自称，special_nickname=对方称呼。
+    所有涉及具体人名的逻辑一律走这里，禁止硬编码。"""
+    ident = CONFIG.get("identity", {}) or {}
+    self_name = str(ident.get("self_nickname", "") or "").strip() or "助手"
+    partner_name = str(ident.get("special_nickname", "") or "").strip() or "用户"
+    return self_name, partner_name
 
 # ==================== MemPalace 集成辅助函数 ====================
 
@@ -118,7 +132,7 @@ _LORE_STOP = {
 
 
 def _load_lore_index():
-    """读取深空百科标题索引。只在命中标题时召回，避免语义检索误配。"""
+    """读取知识库标题索引（路径来自配置）。只在命中标题时召回，避免语义检索误配。"""
     global _lore_index
     if _lore_index is not None:
         return _lore_index
@@ -214,7 +228,7 @@ def _extract_lore_search_query(messages, default_query: str = "") -> str:
 
 
 def _search_lore_sync(query: str) -> str:
-    """命中深空百科标题时，取对应原文；闲聊不注入。"""
+    """命中知识库标题时，取对应原文；闲聊不注入。"""
     mp_cfg = CONFIG.get("mempalace", {})
     lore_cfg = mp_cfg.get("lore", {})
     if not mp_cfg.get("enabled", True) or not lore_cfg.get("enabled", True):
@@ -254,10 +268,12 @@ def _search_lore_sync(query: str) -> str:
         body = "\n\n".join(blocks)
         if len(body) > max_chars:
             body = body[:max_chars].rstrip() + "\n…（词条已截断）"
-        return (
-            "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；"
-            "不要改写成新设定，不要把未命中的内容当成已知。\n" + body
+        header = lore_cfg.get(
+            "recall_header",
+            "【知识库·按需召回】以下是命中的词条原文，只在本轮话题涉及这些词时使用；"
+            "不要改写成新设定，不要把未命中的内容当成已知。",
         )
+        return f"{header}\n{body}"
     except Exception as exc:
         print(f"[MemPalace] Lore search exception: {exc}")
         return ""
@@ -323,8 +339,9 @@ def _save_turn_to_mempalace_async(user_text: str, assistant_text: str):
     """在后台线程中将本次对话完整入库"""
     def _worker():
         now_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # 格式化存入
-        entry = f"[{now_str}] 对话记录\n言言: {user_text}\n沈星回: {assistant_text}"
+        # 格式化存入（昵称走 identity 配置，禁止硬编码）
+        self_name, partner_name = _identity_names()
+        entry = f"[{now_str}] 对话记录\n{partner_name}: {user_text}\n{self_name}: {assistant_text}"
         _add_drawer_sync(entry)
     threading.Thread(target=_worker, daemon=True).start()
 
@@ -460,6 +477,8 @@ class ChatCompletionRequest(BaseModel):
     developer: Any = ""
     # Attachment metadata is passed untouched to desktop_bridge.
     files: Optional[List[Dict[str, Any]]] = None
+    # WeChat/desktop style inline uploads: [{name, mime_type, data_base64}].
+    fileUploads: Optional[List[Dict[str, Any]]] = None
     imageMetas: Optional[List[Dict[str, Any]]] = None
     images: Optional[List[Any]] = None
 
@@ -623,7 +642,8 @@ def _extract_wechat_record_info(text, default_timestamp=None):
     Extracts clean conversation content, platform source tag, and timestamp from WeChat prompts.
     Returns (clean_text, source_marker, timestamp) or None if not a recognized WeChat prompt.
     """
-    if "这是沈星回和言言的微信私聊" in text or ("微信私聊" in text and "微信号：" in text):
+    self_name, partner_name = _identity_names()
+    if f"这是{self_name}和{partner_name}的微信私聊" in text or ("微信私聊" in text and "微信号：" in text):
         # Source marker is authored by the WeChat private-chat service and travels
         # inside the prompt as a 【.xxx.】 tag; GA only extracts it (never hardcodes).
         m_src = re.search(r"【\.([^】\n]*?)\.】", text)
@@ -647,7 +667,8 @@ def _extract_wechat_record_info(text, default_timestamp=None):
                 t_str, nick, body = m_full.group(1), m_full.group(2), m_full.group(3).strip()
                 if t_str and not msg_ts:
                     msg_ts = t_str
-                speaker = nick.strip() if nick else "言言"
+                self_name, partner_name = _identity_names()
+                speaker = nick.strip() if nick else partner_name
                 if body and not body.startswith("只输出严格"):
                     valid_lines.append(f"{speaker}: {body}")
             else:
@@ -788,12 +809,13 @@ def _run_api_chat_turn(query, instructions="", attachments=None):
         records = _load_api_dialogue()
         api_agent.llmclient.backend.history = _api_chat_history(records)
         original_extra = list(api_agent.extra_sys_prompts)
+        _self_name, _partner_name = _identity_names()
         api_agent.extra_sys_prompts.append(
             "【API 历史元信息约定】历史对白开头的时间戳、来源暗号、来源未标记和时间未知标签"
             "仅用于识别历史来源，不是回复正文格式。生成正文不得复制这些前缀；"
             "新回复生成时间由 API 自动记录，不要自行生成或猜测元信息。\n"
-            "【沉浸第一人称约定】沈星回与言言对话交流或自称时，必须始终使用第一人称“我”，"
-            "严禁在对白中以第三人称“沈星回”称呼自己（如严禁出现“沈星回就在旁边”、“沈星回觉得”等）。")
+            f"【沉浸第一人称约定】与{_partner_name}对话交流或自称时，必须始终使用第一人称“我”，"
+            f"严禁在对白中以第三人称（如“{_self_name}”）称呼自己（如严禁出现“{_self_name}就在旁边”、“{_self_name}觉得”等）。")
         if instructions:
             api_agent.extra_sys_prompts.append(
                 "【API 当轮特殊指令及召回内容，仅本轮有效】\n" + instructions)
@@ -1143,6 +1165,189 @@ def _bridge_messages(after=0):
     return _bridge_json("GET", f"/session/{BRIDGE_SESSION_ID}/messages?after={after}&limit=200", timeout=30)
 
 
+# ==================== 附件直传（图片 + 文件） ====================
+
+_UPLOAD_ROOT = script_dir / "temp" / "api_uploads"
+_UPLOAD_MAX_BYTES = 40 * 1024 * 1024
+_INLINE_TEXT_MAX = 20000
+_INLINE_TEXT_EXTS = {".txt", ".md", ".markdown", ".json", ".csv", ".tsv", ".log",
+                     ".yaml", ".yml", ".ini", ".toml", ".py", ".js", ".ts", ".html", ".xml"}
+
+
+def _prune_upload_dirs(max_age_seconds=86400):
+    """Drop per-turn upload dirs left behind by older turns."""
+    try:
+        now = time.time()
+        for entry in _UPLOAD_ROOT.iterdir():
+            try:
+                if entry.is_dir() and now - entry.stat().st_mtime > max_age_seconds:
+                    import shutil
+                    shutil.rmtree(entry, ignore_errors=True)
+            except OSError:
+                pass
+    except FileNotFoundError:
+        pass
+    except OSError:
+        pass
+
+
+def _inline_text_payload(name, mime, raw):
+    """Return decoded text for small text-like uploads, else None."""
+    ext = os.path.splitext(name)[1].lower()
+    if not (mime.startswith("text/") or ext in _INLINE_TEXT_EXTS):
+        return None
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        text = raw.decode("utf-8", "replace")
+    if len(text) > _INLINE_TEXT_MAX:
+        text = text[:_INLINE_TEXT_MAX] + f"\n…（内容过长，已截断，完整文件在 {name}）"
+    return text
+
+
+def _materialize_uploaded_files(uploads):
+    """Write inline base64 uploads to disk so GA tools can read them.
+
+    Returns a list of {path, name, mime, text}; text is the decoded body for
+    small text-like files (None for binary/large ones). Never raises: a bad
+    entry is skipped with a log line instead of failing the whole chat turn.
+    """
+    if not isinstance(uploads, (list, tuple)) or not uploads:
+        return []
+    _prune_upload_dirs()
+    turn_dir = None
+    saved = []
+    for entry in uploads:
+        if not isinstance(entry, dict):
+            continue
+        name = os.path.basename(str(entry.get("name") or entry.get("filename") or "upload.bin"))
+        mime = str(entry.get("mime_type") or entry.get("mime") or
+                   mimetypes.guess_type(name)[0] or "application/octet-stream")
+        payload = entry.get("data_base64") or entry.get("data") or ""
+        raw = None
+        if isinstance(payload, str) and payload:
+            try:
+                raw = base64.b64decode(re.sub(r"\s+", "", payload), validate=False)
+            except (ValueError, binascii.Error) as exc:
+                print(f"[_run_api_turn] file decode failed for {name}: {exc}")
+                continue
+        else:
+            local = entry.get("path")
+            if isinstance(local, str) and local and os.path.isfile(local):
+                try:
+                    with open(local, "rb") as fh:
+                        raw = fh.read()
+                except OSError as exc:
+                    print(f"[_run_api_turn] file read failed for {local}: {exc}")
+                    continue
+        if not raw:
+            continue
+        if len(raw) > _UPLOAD_MAX_BYTES:
+            print(f"[_run_api_turn] file skipped (too large): {name} {len(raw)} bytes")
+            continue
+        if turn_dir is None:
+            _UPLOAD_ROOT.mkdir(parents=True, exist_ok=True)
+            turn_dir = tempfile.mkdtemp(prefix="turn-", dir=str(_UPLOAD_ROOT))
+        path = os.path.join(turn_dir, name)
+        try:
+            with open(path, "wb") as fh:
+                fh.write(raw)
+        except OSError as exc:
+            print(f"[_run_api_turn] file write failed for {name}: {exc}")
+            continue
+        saved.append({"path": path, "name": name, "mime": mime,
+                      "text": _inline_text_payload(name, mime, raw)})
+    return saved
+
+
+def _patch_chat_for_images(client, image_blocks):
+    """Inject base64 image blocks into this turn's first LLM call.
+
+    NativeToolClient.chat() drops blocks without a text field before calling
+    backend.ask(), so image blocks must be appended at the backend level.
+    Same idea as frontends/desktop_bridge.py::_patch_chat_for_images, but the
+    API backend is usually a MixinSession facade, whose ask() is read-only;
+    in that case the routed implementation (_ask_impl) is wrapped instead.
+    Returns a callable that restores the original call path.
+    """
+    if not image_blocks:
+        return lambda: None
+    try:
+        from llmcore import NativeToolClient, MixinSession
+    except Exception as exc:
+        print(f"[_run_api_turn] cannot import llmcore classes: {exc}")
+        return lambda: None
+    if not isinstance(client, NativeToolClient):
+        print(f"[_run_api_turn] client {type(client).__name__} is not NativeToolClient; images not injected")
+        return lambda: None
+
+    backend = client.backend
+    state = {"injected": False}
+
+    def _inject(prompt):
+        state["injected"] = True
+        try:
+            if isinstance(prompt, dict) and isinstance(prompt.get("content"), list):
+                prompt["content"].extend(image_blocks)
+                print(f"[_run_api_turn] injected {len(image_blocks)} image block(s) into the first LLM call")
+            else:
+                print("[_run_api_turn] first LLM call had no content list; images not injected")
+        except Exception as exc:
+            print(f"[_run_api_turn] image injection failed: {exc}")
+
+    # Path A: mixin facade — wrap the routed ask implementation.
+    if isinstance(backend, MixinSession):
+        previous_impl = backend._ask_impl
+
+        def patched_impl(session, prompt):
+            if not state["injected"]:
+                _inject(prompt)
+            resp = yield from previous_impl(session, prompt)
+            return resp
+
+        try:
+            backend._ask_impl = patched_impl
+        except AttributeError as exc:
+            print(f"[_run_api_turn] cannot patch mixin ask impl: {exc}")
+            return lambda: None
+        print(f"[_run_api_turn] image patch installed on MixinSession ({backend.current_name})")
+
+        def restore():
+            if backend.__dict__.get("_ask_impl") is patched_impl:
+                backend._ask_impl = previous_impl
+
+        return restore
+
+    # Path B: plain session — wrap backend.ask.
+    previous = getattr(backend, "ask")
+    had_own = "ask" in backend.__dict__
+
+    def patched_ask(msg):
+        if not state["injected"]:
+            _inject(msg)
+        resp = yield from previous(msg)
+        return resp
+
+    try:
+        backend.ask = patched_ask
+    except AttributeError as exc:
+        print(f"[_run_api_turn] cannot patch backend.ask: {exc}")
+        return lambda: None
+    print(f"[_run_api_turn] image patch installed on {type(backend).__name__}.ask")
+
+    def restore():
+        if backend.__dict__.get("ask") is patched_ask:
+            if had_own:
+                backend.ask = previous
+            else:
+                try:
+                    del backend.ask
+                except AttributeError:
+                    pass
+
+    return restore
+
+
 def _run_api_turn_native(query, initial_user_content=None, attachments=None):
     """Run one turn on the official GenericAgent without contacting desktop Bridge."""
     global api_agent
@@ -1150,10 +1355,11 @@ def _run_api_turn_native(query, initial_user_content=None, attachments=None):
         if api_agent is None:
             raise HTTPException(status_code=503, detail="GenericAgent is not ready")
         prompt = initial_user_content if initial_user_content is not None else query
-        # Collect attached images (materialized local paths) into data URLs so the
-        # native GA turn can feed them to the multimodal model. Without this the
+        # Collect attached images (materialized local paths) into base64 blocks so
+        # the native GA turn can feed them to the multimodal model. Without this the
         # image blocks are silently dropped before reaching the LLM client.
-        turn_images = []
+        image_blocks = []
+        attachment_notes = []
         if isinstance(attachments, dict):
             for meta in (attachments.get("imageMetas") or []):
                 path = meta.get("path") if isinstance(meta, dict) else meta
@@ -1163,48 +1369,141 @@ def _run_api_turn_native(query, initial_user_content=None, attachments=None):
                     with open(path, "rb") as fh:
                         raw = fh.read()
                     mime = mimetypes.guess_type(path)[0] or "image/png"
-                    turn_images.append(f"data:{mime};base64," + base64.b64encode(raw).decode())
+                    image_blocks.append({
+                        "type": "image",
+                        "source": {
+                            "type": "base64",
+                            "media_type": mime,
+                            "data": base64.b64encode(raw).decode(),
+                        },
+                    })
                 except Exception as exc:
                     print(f"[_run_api_turn] image attach failed for {path}: {exc}")
-        print(f"[_run_api_turn] independent GenericAgent prompt (first 150 chars): {str(prompt)[:150]} (images={len(turn_images)})")
+            uploads = attachments.get("fileUploads") or attachments.get("files") or []
+            saved_files = _materialize_uploaded_files(uploads)
+            for item in saved_files:
+                attachment_notes.append(
+                    f"- {item['name']}（{item['mime']}）→ {item['path']}")
+                if item.get("text") is not None:
+                    attachment_notes.append(
+                        f"  文件内容如下：\n<<<FILE {item['name']}>>>\n{item['text']}\n<<<END FILE>>>")
+        if attachment_notes:
+            note = ("\n\n【本轮附件】用户随消息上传了以下文件，内容已直接附在下方；"
+                    "小文本文件无需再调用工具读取，二进制/大文件可按路径读取：\n"
+                    + "\n".join(attachment_notes))
+            prompt = str(prompt) + note
+        if image_blocks:
+            hint = (f"\n\n【本轮图片】本消息已直接附带 {len(image_blocks)} 张图片，"
+                    "图片内容随消息一起送达，可直接查看。无需再用任何工具去微信/远程电脑/WeFlow 取图或 OCR。")
+            prompt = str(prompt) + hint
+        print(f"[_run_api_turn] independent GenericAgent prompt (first 150 chars): {str(prompt)[:150]} "
+              f"(images={len(image_blocks)}, files={len(attachment_notes)})")
         # 只读快照，避免异常结束时误取上一轮回复。
         before_history = api_agent.llmclient.backend.history
         previous_last = before_history[-1] if before_history else None
-        outq = api_agent.put_task(prompt, source="api", images=turn_images)
-        deadline = time.time() + 600
-        full = ""
-        while time.time() < deadline:
+        restore_images = _patch_chat_for_images(api_agent.llmclient, image_blocks)
+        try:
+            outq = api_agent.put_task(prompt, source="api", images=image_blocks)
+            deadline = time.time() + 600
+            full = ""
+            while time.time() < deadline:
+                try:
+                    item = outq.get(timeout=1.0)
+                except queue.Empty:
+                    continue
+                if item.get("next"):
+                    full += str(item["next"])
+                if "done" in item:
+                    done = item.get("done") or full
+                    # done is authoritative; next chunks may be cumulative or incremental.
+                    if done:
+                        full = str(done)
+                    # 原生流可能将 thinking_delta 无标签拼入 done；只在本轮
+                    # 最终消息确有结构化思考块时改用 text 块，绝不修改历史。
+                    history = api_agent.llmclient.backend.history
+                    last = history[-1] if history else None
+                    if (isinstance(last, dict) and last is not previous_last
+                            and last.get("role") == "assistant"):
+                        blocks = last.get("content")
+                        if isinstance(blocks, list) and any(
+                            isinstance(b, dict) and b.get("type") in
+                            ("thinking", "redacted_thinking", "reasoning")
+                            for b in blocks
+                        ):
+                            full = "".join(
+                                b.get("text", "") for b in blocks
+                                if isinstance(b, dict) and b.get("type") == "text"
+                                and isinstance(b.get("text"), str)
+                            )
+                            print("[API] Structured final text selected; thinking excluded")
+                    return strip_final_info_marker(full)
+            raise HTTPException(status_code=504, detail="GenericAgent response timeout")
+        finally:
+            restore_images()
+
+
+# ==================== /llm 模型切换命令 ====================
+# 任何调用本 API 的平台，只要在对话里发送 "/llm" 或 "/llm <编号>"，
+# 即可查看 / 切换底层真正工作的模型（与飞书 /llm 行为一致）。
+# 命令不会进入对话历史，也不会占用模型的上下文。
+
+_LLM_CMD_RE = re.compile(r'^\s*/llm(?:\s+(\S+))?\s*$', re.IGNORECASE)
+
+
+def _is_llm_command(text: str) -> bool:
+    """判断一条用户消息是否为 /llm 命令。"""
+    return bool(_LLM_CMD_RE.match(_text_content(text or "")))
+
+
+def _handle_llm_command(text: str) -> str:
+    """执行 /llm 命令并返回给用户的文本。
+
+    /llm        -> 列出所有可用模型（→ 标记当前）
+    /llm <编号> -> 切换到指定编号的模型
+    """
+    global api_agent
+    m = _LLM_CMD_RE.match(_text_content(text or ""))
+    if not m:
+        return "用法: /llm 查看模型列表；/llm <编号> 切换模型"
+    arg = m.group(1)
+    with api_lock:
+        if api_agent is None or not getattr(api_agent, "llmclient", None):
+            return "❌ 当前没有可用的 LLM 配置"
+        try:
+            if arg is None:
+                items = api_agent.list_llms()
+                if not items:
+                    return "❌ 当前没有可用的 LLM 配置"
+                lines = [f"{'→' if cur else '  '} [{i}] {name}"
+                         for i, name, cur in items]
+                return ("LLMs:\n" + "\n".join(lines)
+                        + f"\n\n当前: [{api_agent.llm_no}] {api_agent.get_llm_name()}"
+                        + "\n发送 /llm <编号> 切换。")
             try:
-                item = outq.get(timeout=1.0)
-            except queue.Empty:
-                continue
-            if item.get("next"):
-                full += str(item["next"])
-            if "done" in item:
-                done = item.get("done") or full
-                # done is authoritative; next chunks may be cumulative or incremental.
-                if done:
-                    full = str(done)
-                # 原生流可能将 thinking_delta 无标签拼入 done；只在本轮
-                # 最终消息确有结构化思考块时改用 text 块，绝不修改历史。
-                history = api_agent.llmclient.backend.history
-                last = history[-1] if history else None
-                if (isinstance(last, dict) and last is not previous_last
-                        and last.get("role") == "assistant"):
-                    blocks = last.get("content")
-                    if isinstance(blocks, list) and any(
-                        isinstance(b, dict) and b.get("type") in
-                        ("thinking", "redacted_thinking", "reasoning")
-                        for b in blocks
-                    ):
-                        full = "".join(
-                            b.get("text", "") for b in blocks
-                            if isinstance(b, dict) and b.get("type") == "text"
-                            and isinstance(b.get("text"), str)
-                        )
-                        print("[API] Structured final text selected; thinking excluded")
-                return strip_final_info_marker(full)
-        raise HTTPException(status_code=504, detail="GenericAgent response timeout")
+                no = int(arg)
+            except ValueError:
+                return f"用法: /llm <0-{len(api_agent.list_llms()) - 1}>"
+            total = len(api_agent.list_llms())
+            if no < 0 or no >= total:
+                return f"❌ 编号超出范围，可用: 0-{total - 1}"
+            api_agent.next_llm(no)
+            return f"✅ 已切换到 [{api_agent.llm_no}] {api_agent.get_llm_name()}"
+        except Exception as exc:
+            return f"❌ 切换失败: {exc}"
+
+
+def _llm_command_response(text: str, model: str, stream: bool):
+    """把 /llm 命令结果包成与普通回复一致的响应（兼容流式/非流式）。"""
+    reply = _handle_llm_command(text)
+    created = int(time.time())
+    if stream:
+        chat_id = f"chatcmpl-llm-{created}"
+        return StreamingResponse(
+            _sse_chat_stream(chat_id, created, model, reply),
+            media_type="text/event-stream",
+            headers=_sse_headers(),
+        )
+    return _openai_chat_completion(f"chatcmpl-llm-{created}", created, model, reply)
 
 
 async def _execute_api_turn(query, messages, instructions="", attachments=None):
@@ -1271,6 +1570,15 @@ async def responses(request: Request):
                          if m.role == "user" and _content_text(m.content).strip()), "")
     if not user_message:
         raise HTTPException(status_code=400, detail="No user input found")
+    # /llm 命令：任何调用方均可查看/切换底层模型，不进入对话历史
+    if _is_llm_command(user_message):
+        reply = _handle_llm_command(user_message)
+        model = body.get("model", CONFIG["model"]["id"])
+        return {"id": f"resp-{int(time.time())}", "object": "response",
+                "created_at": int(time.time()), "model": model,
+                "output": [{"type": "message", "id": f"msg-{int(time.time())}",
+                            "role": "assistant", "content": [{"type": "output_text", "text": reply}]}],
+                "output_text": reply, "status": "completed"}
     full_response = await _execute_api_turn(user_message, messages, instructions)
     model = body.get("model", CONFIG["model"]["id"])
     full_response = _clean_api_response(full_response)
@@ -1299,6 +1607,24 @@ async def completions(request: Request):
         print(f"[Completions] instructions preview: {preview}")
     if not prompt.strip():
         raise HTTPException(status_code=400, detail="No prompt found")
+    # /llm 命令：任何调用方均可查看/切换底层模型，不进入对话历史
+    if _is_llm_command(prompt):
+        text = _handle_llm_command(prompt)
+        created = int(time.time())
+        cmpl_id = f"cmpl-llm-{created}"
+        model = body.get("model", CONFIG["model"]["id"])
+        if body.get("stream"):
+            return StreamingResponse(
+                _sse_text_completion_stream(cmpl_id, created, model, text),
+                media_type="text/event-stream",
+                headers=_sse_headers(),
+            )
+        return {
+            "id": cmpl_id, "object": "text_completion", "created": created,
+            "model": model,
+            "choices": [{"text": text, "index": 0, "logprobs": None, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+        }
     messages = [Message(role="user", content=prompt)]
     full_response = await _execute_api_turn(prompt, messages, instructions=instructions)
     text = _clean_api_response(full_response)
@@ -1381,6 +1707,10 @@ async def chat_completions(request: ChatCompletionRequest):
             raise HTTPException(status_code=400, detail="No user message found")
         user_message = user_text.strip() or "请分析用户发送的图片。"
 
+        # /llm 命令：任何调用方均可查看/切换底层模型，不进入对话历史
+        if _is_llm_command(user_message):
+            return _llm_command_response(user_message, request.model, bool(request.stream))
+
         # Extract platform instructions and marker
         platform_instructions, platform_marker = _chat_request_instructions(request)
         if platform_instructions:
@@ -1399,7 +1729,8 @@ async def chat_completions(request: ChatCompletionRequest):
         print(f"[ChatCompletions] Final user message: {_safe_preview(timestamped_message)}")
 
         attachments = {k: v for k, v in {
-            "files": request.files, "imageMetas": request.imageMetas, "images": request.images
+            "files": request.files, "fileUploads": getattr(request, "fileUploads", None),
+            "imageMetas": request.imageMetas, "images": request.images
         }.items() if v}
         if content_image_metas:
             attachments["imageMetas"] = (attachments.get("imageMetas") or []) + content_image_metas
