@@ -55,8 +55,8 @@ DEFAULT_CONFIG = {
         "require_auth": True
     },
     "model": {
-        "id": "xavier-gemini-pro",
-        "name": "Xavier Gemini Pro (GenericAgent)",
+        "id": "agent-gemini-pro",
+        "name": "Agent Gemini Pro (GenericAgent)",
         "description": "家里的GA系统 - 全工具访问权限",
         "created": 1725523200
     },
@@ -69,21 +69,21 @@ DEFAULT_CONFIG = {
         ]
     },
     "identity": {
-        "self_nickname": "沈星回",
-        "special_nickname": "搭档"
+        "self_nickname": "助手",
+        "special_nickname": "用户"
     },
     "mempalace": {
         "enabled": True,
-        "wing": "xavier_api",
+        "wing": "agent_api",
         "search_limit": 3,
         "max_distance": 0.85,
         "lore": {
-            "enabled": True,
+            "enabled": False,
             "wing": "lore",
             "max_hits": 3,
             "max_chars": 1600,
-            "index_file": "temp/lysk_wiki_深空百科_entries.json",
-            "recall_header": "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。"
+            "index_file": "temp/lore_entries.json",
+            "recall_header": "【知识库·按需召回】以下是命中的词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。"
         }
     }
 }
@@ -127,8 +127,12 @@ _LORE_STOP = {
     "今天", "昨天", "明天", "现在", "我们", "你们", "他们", "这个", "那个",
     "什么", "怎么", "为什么", "不是", "没有", "一个", "一下", "可以", "知道",
     "觉得", "还是", "然后", "就是", "因为", "所以", "如果", "已经", "自己",
-    "深空", "游戏", "猎人", "世界", "百科", "词条",
+    "游戏", "世界", "百科", "词条",
 }
+# 词条库专属的高频词（如某个作品/世界观的通用词）通过配置追加，代码本身保持中性。
+_LORE_STOP |= set(
+    (CONFIG.get("mempalace", {}).get("lore", {}) or {}).get("extra_stop_tokens") or []
+)
 
 
 def _load_lore_index():
@@ -137,7 +141,7 @@ def _load_lore_index():
     if _lore_index is not None:
         return _lore_index
     lore_cfg = CONFIG.get("mempalace", {}).get("lore", {})
-    rel = lore_cfg.get("index_file", "temp/lysk_wiki_深空百科_entries.json")
+    rel = lore_cfg.get("index_file", "temp/lore_entries.json")
     path = Path(__file__).resolve().parent / rel
     titles = []
     try:
@@ -180,8 +184,8 @@ def _match_lore_titles(query: str, max_hits: int = 3):
 
 
 def _extract_lore_search_query(messages, default_query: str = "") -> str:
-    """从输入消息中精确提取用于百科召回的真实用户发言正文。
-    严禁将人设提示词、群规、群友昵称、时间戳、引用前缀扫描进百科匹配池。
+    """从输入消息中精确提取用于知识库召回的真实用户发言正文。
+    严禁将人设提示词、群规、群友昵称、时间戳、引用前缀扫描进知识库匹配池。
     """
     raw_texts = []
     for m in messages or []:
@@ -279,7 +283,7 @@ def _search_lore_sync(query: str) -> str:
         return ""
 
 
-def _search_mempalace_sync(query: str, wing: str = "xavier_api", limit: int = 3, max_distance: float = 0.85) -> str:
+def _search_mempalace_sync(query: str, wing: str = "agent_api", limit: int = 3, max_distance: float = 0.85) -> str:
     """从 MemPalace 检索相关历史记忆"""
     mp_cfg = CONFIG.get("mempalace", {})
     if not mp_cfg.get("enabled", True):
@@ -317,7 +321,7 @@ def _search_mempalace_sync(query: str, wing: str = "xavier_api", limit: int = 3,
         print(f"[MemPalace] Search exception: {exc}")
     return ""
 
-def _add_drawer_sync(content: str, wing: str = "xavier_api", room: str = "chat_history"):
+def _add_drawer_sync(content: str, wing: str = "agent_api", room: str = "chat_history"):
     """异步或后台写入 MemPalace"""
     mp_cfg = CONFIG.get("mempalace", {})
     if not mp_cfg.get("enabled", True):
@@ -492,9 +496,9 @@ class ChatCompletionResponse(BaseModel):
 # ==================== 全局状态 ====================
 
 # API owns its own GenericAgent process.  The desktop UI is a separate channel.
-# The fixed session file is used as the durable hand-off for Xavier short memory.
-BRIDGE_SESSION_ID = os.environ.get("GA_XAVIER_SESSION_ID", "sess-53138a368967")
-BRIDGE_SESSION_TITLE = "Xavier-chat"
+# The fixed session file is used as the durable hand-off for agent short memory.
+BRIDGE_SESSION_ID = os.environ.get("GA_AGENT_SESSION_ID", "sess-53138a368967")
+BRIDGE_SESSION_TITLE = "agent-chat"
 SESSION_FILE = script_dir / "temp" / "desktop_sessions" / f"{BRIDGE_SESSION_ID}.json"
 SESSION_LOCK_FILE = script_dir / "temp" / "desktop_sessions" / f"{BRIDGE_SESSION_ID}.api.lock"
 api_agent = None
@@ -571,7 +575,7 @@ def _session_history_from_disk():
     except FileNotFoundError:
         return []
     except Exception as exc:
-        print(f"[API] could not load Xavier session history: {exc}")
+        print(f"[API] could not load agent session history: {exc}")
         return []
 
 def _persist_api_history(history):
@@ -880,7 +884,7 @@ def _start_api_agent():
     api_agent.inc_out = False
     api_agent_thread = threading.Thread(target=api_agent.run, name="ga-api-agent", daemon=True)
     api_agent_thread.start()
-    print(f"   Independent GenericAgent started; Xavier session={BRIDGE_SESSION_ID}, history={len(disk_history)}")
+    print(f"   Independent GenericAgent started; agent session={BRIDGE_SESSION_ID}, history={len(disk_history)}")
 
 @asynccontextmanager
 async def lifespan(app):
@@ -1526,7 +1530,7 @@ async def _execute_api_turn(query, messages, instructions="", attachments=None):
             instruction_text = mp_context
         print(f"[_execute_api_turn] Injected MemPalace memories into instructions")
 
-    # 仅扫描真实用户发言正文；命中深空百科标题才追加词条，闲聊或人设规则不注入。
+    # 仅扫描真实用户发言正文；命中知识库标题才追加词条，闲聊或人设规则不注入。
     lore_query = _extract_lore_search_query(messages, default_query=query)
     lore_text = _search_lore_sync(lore_query)
     if lore_text:
