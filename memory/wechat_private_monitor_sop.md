@@ -22,6 +22,7 @@
 - 修改、移植或打包前先对照目标版本与 git 历史；只做局部补丁，禁止用旧副本整文件覆盖已修复版本。改发送适配不能删除生成阶段保护。
 - 私聊生成异常必须捕获并计入 `fail_count`，刷新 `last_update` 等待 debounce；累计三次失败移除 pending 批次并记录 `generate_exception_max_retries`，禁止无限重试。空回复与发送失败的既有保护也必须保留。
 - 发布/部署前必须运行分发仓 `wechat/private-monitor/test_generation_breaker.py`；覆盖生成异常熔断、debounce、失败后恢复、空回复、发送失败。仅语法通过不等于行为验证。
+- **发送等待必须随气泡数放大**：`wechat_windows_adapter.py` 按段数计算 `min(45, 8 + (段数-1) × 1.8)` 秒（2026-10-21 实测每段约 1.0~1.8 秒，5 段需 9 秒，旧的固定 8 秒会误判超时并触发重发）。段数统计 `_count_segments()` 必须与 `wechat_task_runner.split_segments()` 规则一致；改任一处都要同步另一处并重跑隔离回执测试。
 - 部署前备份并核对目标内容，测试通过后仅重启获准的服务；真实发送测试应单独确认，不得用进程存活冒充成功。
 
 ## 比对基准铁律（2026-10-21 言言纠正，两次误判的根因）
@@ -30,6 +31,8 @@
   再用 `certutil -hashfile <该路径> MD5` 取真实哈希，与 GitHub 同路径文件哈希直接对比。
 - **仓库存档（`wechat/win176/`）只用于回滚，不作事实来源**。存档与线上不一致时以线上为准，并把存档刷新为线上当前版本；旧档移入 `wechat/win176/backup/`，文件名带日期与旧 MD5。
 - **动手前先做"当前时刻"的新备份**：线上原文件复制为 `*.bak_YYYYMMDD_HHMM` 并回读校验 MD5；严禁拿已有旧备份当"安全备份"。
+- **计划任务拉起的文件同样要追到最终路径**：`schtasks /query /tn SendTestTask /fo LIST /v`（项名"要运行的任务"）→ `run_test.ps1` → `python.exe <脚本>`；`wechat_task_runner.py` 这类由计划任务执行的脚本，以其最终被调用的路径为准。
+- **本地存档清单**（`wechat/win176/`，仅供回滚）：`wechat_xavier_private_monitor.py`、`wechat_task_runner.py`、`wechat_windows_adapter.py`；均按线上当前哈希刷新，旧档改名进 `backup/`。
 - 实例：2026-10-21 用 10-20 20:02 的快照（`e2dd9473`）去比 GitHub（`e45b9f2e`），误判"GitHub 领先现网"，实际线上与 GitHub 逐字节相同。旧快照比线上落后 1910 字节、差 23 小时。
 
 ## 上下文与来源标注规范（2026-10-19 已验证）
