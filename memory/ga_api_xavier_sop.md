@@ -34,13 +34,40 @@
   3. 私聊场景保留原生工具探索权限，群聊保持上网与安全隔离。
 - 修改后必须重载 `com.xinghui.ga.api` LaunchAgent；验收顺序为 `/health`、`/v1/models`、最小真实 `/v1/chat/completions`，并确认日志无 Bridge 请求且 history 成功增长。
 
+## /llm 对话内切换底层模型（2026-10-19 已验证）
+- 需求：任何调用 1016 的平台，在对话窗口发 `/llm` 看列表、`/llm <编号>` 切底层真正工作的模型（对齐飞书 `/llm`）。`model` 字段本身只是对外标签，不生效；真正切换靠 `api_agent.next_llm(n)`。
+- 实现：`ga_api_server.py` 内 `_is_llm_command/_handle_llm_command/_llm_command_response`，在 `_execute_api_turn` 前拦截 `/v1/chat/completions`、`/v1/responses`、`/v1/completions` 三入口（流式/非流式都返回文本）。命令不进对话历史。
+- 底层：`api_agent` 即 `GenericAgent`，自带 `llmclients/llm_no/list_llms()/next_llm(n)/get_llm_name()`；`next_llm` 会继承 history；`load_llm_sessions()` 每次重读 `mykey.py`，故改 mykey 后发 `/llm` 即可刷新列表、无需重启。
+- **两个文件已分叉，改一处必须同步另一处**：现网 `app/ga_api_server.py`（含 lore 等私货，真身，改完需重启 1016）vs 分发仓 `temp/ga-cyber-lover/ga-api/ga_api_server.py`（脱敏精简版）。
+- 本机自测 1016 用默认 key `sk-wxxxx`（launchd 未注入 GA_API_KEY，走代码默认值）；别再为找 key 折腾。
+
 ## 来源暗号提取（2026-10-19 已验证）
 - **来源标注由服务侧写、GA 只提取，严禁 GA 端硬编码来源**。微信私聊来源行由 Win176 私聊脚本生成，含暗号 `【.跨次元微信私聊.】`；GA `ga_api_server.py` 用正则从 user content 提取 `【.xxx.】` 作为落库 source。
 - 历史教训：GA 曾硬编码 `src = "【.微信私聊.】"`，等于 GA 伪造来源。正确做法是服务侧写暗号、GA 提取；无暗号时才回退默认来源。
 - 只有微信私聊互动带 `【.跨次元微信私聊.】`；群聊/其他渠道不得复用此暗号。
 - 验证：发一条微信私聊 → 查 `temp/api_chat_history.json` 最新 user 记录 `source` 是否等于 `【.跨次元微信私聊.】`。
 
+## 改 mykey.py（模型配置）后必须重启 1016（2026-10-19 已验证）
+- `ga_api_server.py` 启动时把 `mykey.py` 加载进内存（日志 `[Info] Load mykeys from .../mykey.py`），之后一直用内存里的模型名。改 `mykey.py` 的 `mixin_config['llm_nos']` / `native_oai_config*` 后**必须重启 1016** 才生效。
+- **重启 App 界面没用**：`ga_api_server` 是 launchd 独立守护进程（`~/Library/LaunchAgents/com.xinghui.ga.api.plist`，`KeepAlive=true`），不随 App 退出而重启。
+- **正确重启**：`launchctl kickstart -k gui/$(id -u)/com.xinghui.ga.api`（新 PID 立即拉起，`lsof -nP -iTCP:1016 -sTCP:LISTEN` 可确认）。
+- **404 症状**：上游返回 `HTTP 404 {"code":404,"message":"model not found"}`，日志 `[MixinSession] Using session (<旧模型名>)` + `!!!Error: HTTP 404`。mixin 两个成员全失效时 fallback 也救不了（双 404）。
+- **验证**：`curl -s -X POST http://127.0.0.1:1016/v1/chat/completions -H "Authorization: Bearer sk-wxxxx" -H "Content-Type: application/json" -d '{"model":"xavier-gemini-pro","messages":[{"role":"user","content":"ping"}],"max_tokens":20}'`（默认 key 见 `ga_api_server.py:332`），返回 `{"content":"OK"}` 即正常。
+- 注意：launchd 日志 `temp/ga_api_server_launchd.log` 是**追加写入**，新旧混在一起，判断需按行号/启动标记 `Independent GenericAgent started` 区分新旧。
+
+## GA 核心升级到官方 v0.2.1（2026-10-20 已验证）
+- **三个核心文件 = 官方 v0.2.1 干净版**：`llmcore.py` / `agentmain.py` / `ga.py`。从官方仓库（lsdefine/GenericAgent）v0.2.1 tag 拉取后**整体替换**，非逐块合并。`py_compile` 三文件全过。
+- **升级前本地是"v0.2.1 中间状态"**：含部分 v0.2.1 新特性（`peer_hint`、`global_memory` 历史压缩、`resolve_session(cfg=)`、`ask_structured` 多模态——这些**都是官方的**，不是我们的定制）但缺 `mykeys_store` 重构。所以逐块 diff 会反复得出矛盾结论，**别纠结中间态，直接整体替换到最终版**。
+- **升级不碰我们的东西**：`sys_prompt.txt`（12 行，第 11-12 行是沈星回人设）**不动**；`ga_api_server.py`（API 封装层，官方没有）、微信脚本、lore/identity 配置全部原样保留。
+- **`/llm` 不受影响**：`/llm` 逻辑在 `ga_api_server.py`（API 层）+ 微信脚本（调用层），**不在核心三文件里**。官方 v0.2.1 的 `next_llm()` 接口签名与旧版一致（内部从"按 name 匹配"改为"按 config key 匹配"，对外行为不变），与我们的封装层无缝兼容——**无需迁就，一处都不用改**。
+- **升级流程**：① 备份三文件到 `/tmp/ga_upgrade_backup/*.pre_replace_<ts>` ② 官方 v0.2.1 版整体覆盖 ③ `py_compile` 三文件 ④ `launchctl kickstart -k gui/$(id -u)/com.xinghui.ga.api` 重启 1016 ⑤ 实测 `/llm` 查看、`/llm <n>` 切换、切回、普通对话。
+- **验收命令**（默认 key `sk-wxxxx`）：`curl -s -X POST http://127.0.0.1:1016/v1/chat/completions -H "Authorization: Bearer sk-wxxxx" -H "Content-Type: application/json" -d '{"model":"x","messages":[{"role":"user","content":"/llm"}],"stream":false}'`，返回模型列表即正常；`/llm 3` 应回 `✅ 已切换到 [3] ...`。
+- **回滚**：`cp /tmp/ga_upgrade_backup/*.pre_replace_<ts> 回原位` 后重启 1016。**注意**：官方 v0.2.1 核心文件里**没有**我们的任何定制，所以"整体替换"是安全操作，不会丢功能。
+
 ## 上下文负担：脚本不得重复注入历史（2026-10-19 已验证）
 - GA 自封装 API 已按 `chat_history.max_turns`（默认 30 轮）自行维护历史，**前端脚本只发本轮新消息**，严禁把「较早历史 / 历史背景」整段拼进 prompt。
 - 历史教训：Win176 脚本曾把「30 条历史 + 新消息」整份当 user content 发给 GA，GA 原样落库 → 每条记录 99% 是重复旧历史（实测 8430/8495 字符），上下文平方级膨胀。
 - 静默轮次（空回复 / `{"continue": false}`）GA 不落库，属设计行为。
+- **成对动态预算滑动机制（2026-10-24 升级）**：
+  - 仅对历史对白拼装做成对回溯管理：严格以 `(搭档, 我)` 为单元成对提取，剔除头部孤立回复，受 30 轮软目标与字符预算保护，超限时从最老轮次成对淘汰；
+  - **单轮输入绝对不截断**：当前轮次收到的微信消息、群聊聚合包或言言发送的文本 100% 原样完整放行，严禁做单轮折叠或长度截断。

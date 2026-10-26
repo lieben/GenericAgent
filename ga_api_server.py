@@ -284,7 +284,7 @@ def _search_lore_sync(query: str) -> str:
 
 
 def _search_mempalace_sync(query: str, wing: str = "agent_api", limit: int = 3, max_distance: float = 0.85) -> str:
-    """从 MemPalace 检索相关历史记忆"""
+    """从 MemPalace 检索相关历史记忆，支持同时检索日常记忆翼与沈星回母库翼"""
     mp_cfg = CONFIG.get("mempalace", {})
     if not mp_cfg.get("enabled", True):
         return ""
@@ -296,27 +296,37 @@ def _search_mempalace_sync(query: str, wing: str = "agent_api", limit: int = 3, 
         clean_q = re.sub(r"【.*?】", "", clean_q).strip()
         if not clean_q:
             return ""
-        # 截断 query 到 200 字符以内符合 MemPalace 要求
         clean_q = clean_q[:200]
-        res = client.call_tool("mempalace_search", {
-            "wing": wing,
-            "query": clean_q,
-            "limit": limit,
-            "max_distance": max_distance
-        })
-        if isinstance(res, str):
-            try:
-                res = json.loads(res)
-            except Exception:
-                pass
-        if isinstance(res, dict) and res.get("results"):
-            matched_texts = []
-            for item in res["results"]:
-                c = item.get("content", "").strip()
-                if c:
-                    matched_texts.append(c)
-            if matched_texts:
-                return "\n---\n".join(matched_texts)
+        
+        # 目标翼：主翼（日常聊天/历史） + V2母库翼（角色亲历/事实/设定）
+        target_wings = [wing]
+        lore_wing = mp_cfg.get("lore_wing", "wing_xinghui")
+        if lore_wing and lore_wing != wing:
+            target_wings.append(lore_wing)
+            
+        all_matched = []
+        for w in target_wings:
+            # 母库翼放宽阈值至 1.15 以便捕捉语义关联，主日常翼按配置
+            dist = 1.15 if w == lore_wing else max_distance
+            res = client.call_tool("mempalace_search", {
+                "wing": w,
+                "query": clean_q,
+                "limit": limit,
+                "max_distance": dist
+            })
+            if isinstance(res, str):
+                try:
+                    res = json.loads(res)
+                except Exception:
+                    pass
+            if isinstance(res, dict) and res.get("results"):
+                for item in res["results"]:
+                    c = item.get("content", "").strip()
+                    if c:
+                        prefix = "【亲历设定与主线事实】" if w == lore_wing else "【过往互动记忆】"
+                        all_matched.append(f"{prefix}\n{c}")
+        if all_matched:
+            return "\n---\n".join(all_matched[:limit + 2])
     except Exception as exc:
         print(f"[MemPalace] Search exception: {exc}")
     return ""
@@ -1054,6 +1064,29 @@ def _sse_headers() -> Dict[str, str]:
     }
 
 
+async def _sse_chat_stream_with_heartbeat(chat_id: str, created: int, model: str, task: asyncio.Task, heartbeat_interval: float = 12.0):
+    """OpenAI chat.completion.chunk SSE with keep-alive comment frames during model thinking."""
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"role": "assistant", "content": ""}))
+    
+    # 当上游桌面端或大模型在思考/生成时，每隔 heartbeat_interval 秒发送 SSE 注释帧保活
+    while not task.done():
+        try:
+            await asyncio.wait_for(asyncio.shield(task), timeout=heartbeat_interval)
+            break
+        except asyncio.TimeoutError:
+            # 标准 SSE 注释帧，Cloudflare 识别为数据活动重置 100s 超时计数器，客户端安全忽略
+            yield ": keepalive\n\n"
+            
+    full_response = await task
+    content = _clean_api_response(full_response)
+    for piece in _iter_content_chunks(content):
+        if piece:
+            yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"content": piece}))
+            await asyncio.sleep(0)
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {}, finish_reason="stop"))
+    yield _sse_data(None)
+
+
 def _clean_api_response(text: str) -> str:
     """API 对外只返回桌面端当前可见的最后一轮正文，不暴露工具过程/摘要。"""
     value = strip_final_info_marker(text)
@@ -1092,6 +1125,35 @@ def _clean_api_response(text: str) -> str:
     # 兼容 GA 文本化协议块：🛠️ Tool / Tool Result 到下一段正文前均隐藏。
     value = re.sub(r'(?ims)^\s*(?:🛠️\s*)?(?:Tool|工具)\s*:.*?(?=\n\s*\n|\Z)', '', value)
     value = re.sub(r'(?ims)^\s*(?:🛠️\s*)?(?:Tool Result|工具结果)\s*:.*?(?=\n\s*\n|\Z)', '', value)
+
+    # 拦截纯 JSON 控制块泄露（如 ```json{"content": ""}``` 或裸 {"continue": false, "content": ""}）
+    # 避免静默/留白或解析兜底失败时原始协议穿透给前端
+    def _strip_control_json(s: str) -> str:
+        s_clean = s.strip()
+        if not s_clean:
+            return ""
+        # 剥离可能存在的 markdown 代码块
+        unwrapped = s_clean
+        if unwrapped.startswith("```"):
+            unwrapped = re.sub(r"^```(?:json)?\s*", "", unwrapped, flags=re.I)
+            unwrapped = re.sub(r"\s*```$", "", unwrapped).strip()
+        m = re.search(r"\{[\s\S]*\}", unwrapped)
+        if m:
+            try:
+                data = json.loads(m.group(0))
+                if isinstance(data, dict):
+                    ctrl_keys = {"continue", "audience", "reply_to", "mention", "content", "reason", "decision"}
+                    # 如果字段属于纯控制结构
+                    if set(data.keys()).issubset(ctrl_keys | {"thinking", "thought"}):
+                        content_val = data.get("content", data.get("reply", data.get("message", None)))
+                        if content_val is not None:
+                            return str(content_val).strip()
+                        return ""
+            except Exception:
+                pass
+        return s
+
+    value = _strip_control_json(value)
     value = re.sub(r'\n{3,}', '\n\n', value)
     return value.strip()
 
@@ -1739,18 +1801,30 @@ async def chat_completions(request: ChatCompletionRequest):
         if content_image_metas:
             attachments["imageMetas"] = (attachments.get("imageMetas") or []) + content_image_metas
 
-        full_response = await _execute_api_turn(timestamped_message, request.messages,
-                                                 instructions=platform_instructions,
-                                                 attachments=attachments)
-        content = _clean_api_response(full_response)
         created = int(time.time())
         chat_id = f"chatcmpl-{created}"
+
+        # 异步启动生成任务
+        turn_task = asyncio.create_task(
+            _execute_api_turn(
+                timestamped_message,
+                request.messages,
+                instructions=platform_instructions,
+                attachments=attachments,
+            )
+        )
+
         if request.stream:
+            # 流式传输：立即返回响应并在等待思考时持续输出 SSE 保活帧，彻底解决 Cloudflare 524 超时
             return StreamingResponse(
-                _sse_chat_stream(chat_id, created, request.model, content),
+                _sse_chat_stream_with_heartbeat(chat_id, created, request.model, turn_task),
                 media_type="text/event-stream",
                 headers=_sse_headers(),
             )
+
+        # 非流式传输直接等待完成
+        full_response = await turn_task
+        content = _clean_api_response(full_response)
         return _openai_chat_completion(chat_id, created, request.model, content)
     finally:
         for path in temp_image_paths:

@@ -45,14 +45,15 @@
       "enabled": true,
       "wing": "lore",
       "max_hits": 3,
-      "max_chars": 1600,
-      "index_file": "temp/lysk_wiki_深空百科_entries.json",
-      "recall_header": "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。",
+      "max_chars": 2000,
+      "index_file": "temp/lysk_v2_combined_lore_entries.json",
+      "recall_header": "【沈星回原著背景与台词·按需召回】以下是命中的官方设定与亲历台词，只在本轮话题相关时作为情感与事实参照，保持第一人称与克制清爽风格：",
       "extra_stop_tokens": [
         "深空",
         "猎人"
       ]
-    }
+    },
+    "lore_wing": "wing_xinghui"
   },
   "identity": {
     "self_nickname": "沈星回",
