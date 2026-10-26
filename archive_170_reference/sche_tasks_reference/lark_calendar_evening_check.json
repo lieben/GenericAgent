@@ -1,0 +1,7 @@
+{
+  "schedule": "21:00",
+  "repeat": "daily",
+  "enabled": true,
+  "max_delay_hours": 12,
+  "prompt": "现在是每天晚上的飞书日程主动查看时间。\n\n第一步：立刻用 update_working_checkpoint 记录本次 scheduler 注入的报告路径。\n\n第二步：运行：\n```\n/home/aimcafe/.local/bin/lark-cli calendar +agenda --format pretty\n```\n读取今天及近期飞书日程。\n\n第三步：整理结果：\n- 明天/近期是否有重要日程、比赛/出行/提醒事项\n- 是否有言言可能需要提前准备或确认的事项\n- 如果没有日程，也如实记录“未看到需要提醒的日程”\n\n第四步：把查看结果写入报告文件（scheduler 会自动注入路径）。\n\n边界：这是例行查看，不要修改日历；不要打扰言言，除非发现明显临近且重要的事项需要提醒。"
+}

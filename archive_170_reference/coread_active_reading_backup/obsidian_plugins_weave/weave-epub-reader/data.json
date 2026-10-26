@@ -1,0 +1,36 @@
+{
+  "license": {
+    "activationCode": "",
+    "isActivated": false,
+    "activatedAt": "",
+    "deviceFingerprint": "",
+    "expiresAt": "",
+    "productVersion": "",
+    "licenseType": "lifetime",
+    "entitlements": [],
+    "source": "local"
+  },
+  "licenseState": {
+    "localLicenses": []
+  },
+  "allowInheritedLicenses": true,
+  "enableDebugMode": false,
+  "showPremiumFeaturesPreview": false,
+  "vocabularyEnabled": true,
+  "paragraphReadingEnabled": true,
+  "bookshelfExcerptStatsEnabled": true,
+  "bookshelfAutoViewByLocationEnabled": true,
+  "bookshelfDisplayMode": "adaptive",
+  "bookDataPageTemplatePath": null,
+  "appliedBookDataTemplateRevision": 0,
+  "bookmarkFolder": "Weave EPUB Reader",
+  "continuousReadingPositionAutoSaveEnabled": false,
+  "continuousReadingPositionAutoSavePages": 5,
+  "sourceNavigationOpenInNewTab": true,
+  "interfaceLanguage": "auto",
+  "vocabularyExamGoals": [
+    "CET6",
+    "考研"
+  ],
+  "vocabularyDiscoverMinFreqRank": 800
+}

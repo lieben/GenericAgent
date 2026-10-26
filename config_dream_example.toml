@@ -1,0 +1,17 @@
+[storage]
+vault_path = "/Users/username/Documents/Obsidian/LifeVault"
+dreams_folder = "Dreams"
+
+[dream]
+review_time = "22:00"
+enable_mempalace = false
+context_length = 4000
+include_group_chats = false
+
+[l4_sources]
+sessions_dir = ""
+
+[server]
+port = 8767
+host = "127.0.0.1"
+log_level = "INFO"

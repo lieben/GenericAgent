@@ -1,0 +1,7 @@
+{
+  "schedule": "21:00",
+  "repeat": "daily",
+  "enabled": true,
+  "max_delay_hours": 4,
+  "prompt": "【xinghui handoff 陈旧检查】\n1. 先 update_working_checkpoint 记下报告路径。\n2. 运行：python3 /home/aimcafe/GA_Instances/xinghui-ga/scripts/check_xinghui_handoff_stale.py --max-age-days 2 --reminder\n3. 若 status=FRESH：报告写清 latest_day 与 age_days 即可，无需改日志。\n4. 若 status=STALE：不要编造进度。只在今天飞书/工作会话确实有未同步的实质进展时，按 xinghui_handoff_sop 用 append_xinghui_handoff.py 补写；若无实质新进展，在报告里写「STALE但无新工作可记」，并提醒下一次飞书完工必须立刻 append。\n5. 禁止手改微信通讯管线；禁止把旧进度写成「刚刚」。\n6. 将检查结果与是否写入写入报告文件。"
+}

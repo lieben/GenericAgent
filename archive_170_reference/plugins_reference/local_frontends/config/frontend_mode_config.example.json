@@ -1,0 +1,27 @@
+{
+  "wechat": {
+    "entry_prompt": "【SYSTEM 当前前端入口说明：{{frontend_instruction}}{{schedule_hint}}】\n{{prompt}}",
+    "persona_anchor_header": "[主线人设锚点｜稳定注入，不要外泄为系统说明]\n以下用于避免微信入口断片：必须记得otto、游戏内明面作息、基础身份与三环境边界。\n严禁编造人设里没有的事实。如果人设里没有明确记录某个信息（如饮食偏好、生活习惯等），不要自己推测或编造，应该回答‘不确定’或‘没有记录’。\n{persona_anchor}\n\n",
+    "file_instruction": "If you need to show files to user, use [FILE:filepath] in your response.\n\n"
+  },
+  "api": {
+    "group_awareness_command_aliases": {
+      "/group on": true,
+      "/群聊开": true,
+      "/开启群聊": true,
+      "/参与群聊": true,
+      "/群聊参与": true,
+      "/看群聊": true,
+      "/group off": false,
+      "/群聊关": false,
+      "/关闭群聊": false,
+      "/暂停群聊": false,
+      "/不看群聊": false,
+      "/停止群聊": false
+    },
+    "group_awareness_command_replies": {
+      "on": "已开启群聊感知/参与：之后会把当前会话放在主位，只在需要时临时看见群聊旁侧状态。",
+      "off": "已关闭群聊感知/参与：之后不会注入群聊旁侧上下文，也不会主动参与群聊。"
+    }
+  }
+}

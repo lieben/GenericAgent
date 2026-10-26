@@ -20,7 +20,7 @@ Mac 侧只有 GA 大脑（自封装 API，`:1016`）。私聊/群监控脚本、
 - `wechat_xavier_private_monitor.py` SHA256 = `8729B1BCCFA9B20C4EECA12CD5CCC842E0C4897D12C28EEA035EA2AC11F819AD`
 - `wechat_task_runner.py`          SHA256 = `C448C2EF6D34465D4BAC9F3363E963B23E6239940CE11AF6ED3A4034BA9F54D8`
 - `wechat_windows_adapter.py`      SHA256 = `1FB14C5614FBEB48CB9888227ACA0EAE781F3DD910612909273651FE76CAAF1B`
-- `wechat_xavier_group_monitor.py` SHA256 = `C2564F9DFE2418F01A4C936ECA12CED716CD50641CB13655FE809242D2403724`（2026-10-19，群聊未重启，仍待对齐）
+- `wechat_xavier_group_monitor.py` SHA256 = `F12494D184AABE25DA935F74089C9DCA75E949DB75519D44B03BD56FDD9A3A67`（2026-10-21，群聊句末句号规范 + 双保险清理，已部署并重启 `Xinghui-Group-Monitor`）
 
 校验命令（在 Win176 上）：
 ```powershell
@@ -35,10 +35,13 @@ Get-FileHash C:\Users\Administrator\group_monitor\wechat_xavier_group_monitor.py
 
 1. **去掉重复历史注入**：私聊/群监控脚本只发「本轮新消息」，不再把「较早历史 / 历史背景」整段拼进发给 GA 的 prompt。历史由 GA 按 `max_turns`（默认 30 轮）自行维护。
    - 私聊 `xavier()`：content 只保留 `"【本轮新消息，按时间排序】"`。
-   - 群监控 `xavier()`：prompt 删除「历史背景（只作理解…）」段。
-2. **来源暗号由服务侧写**：私聊来源行带 `【.跨次元微信私聊.】`，GA 端只提取、不硬编码。
-3. **分气泡发送**：`wechat_task_runner.py` 按空行（无空行时按单换行）拆段，逐段粘贴，段间 0.45 秒；`send_result.json` 的 `segments` 记录实际气泡数。
-4. **发送等待按段数放大**：`wechat_windows_adapter.py` 由固定 8 秒改为 `min(45, 8 + (段数-1) × 1.8)` 秒，避免 5 段以上被误判超时而重发。
+   - 群监控 `xavier()`：用户正文以 `【新消息】` 开头，只含本轮新消息；群规则与人设作为临时 system instruction，不写入历史。
+2. **群聊图片改为原生多模态**：删除脚本侧 Flash 看图/`image_captions`/`画面：…` 文本；高频或言言发言时把原图作为 `image_url` 块交给 GA，低频仍只保留 `[图片]`。
+3. **群聊上下文行修复**：每条消息压成单行并保留完整正文/引用，按时间正序；避免 GA 行解析把消息截断或把正文尾部误当成新消息。
+4. **来源暗号由服务侧写**：私聊来源行带 `【.跨次元微信私聊.】`，GA 端只提取、不硬编码。
+5. **分气泡发送**：`wechat_task_runner.py` 按空行（无空行时按单换行）拆段，逐段粘贴，段间 0.45 秒；`send_result.json` 的 `segments` 记录实际气泡数。
+6. **发送等待按段数放大**：`wechat_windows_adapter.py` 由固定 8 秒改为 `min(45, 8 + (段数-1) × 1.8)` 秒，避免 5 段以上被误判超时而重发。
+7. **群聊句末不带句号**：`DEFAULT_GROUP_SYSTEM_PROMPT` 增加「像微信随手回复、短句收尾、每条末尾不带句号（与私聊规范一致）」；`strip_trailing_period()` 在 Xavier 解析 content 处和 `physical_send()` 发送前双重清理末尾「。」与单个/连续英文句点，保留省略号「……」和「...」；按行处理以匹配分气泡发送。
 
 详见 `memory/wechat_private_monitor_sop.md` 与 `memory/ga_api_xavier_sop.md`。
 

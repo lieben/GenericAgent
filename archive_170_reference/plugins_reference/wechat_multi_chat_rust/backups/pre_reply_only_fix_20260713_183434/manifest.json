@@ -1,0 +1,11 @@
+{
+  "service": "ga-wechat-group-monitor.service",
+  "old_pid": 2657315,
+  "old_exe_link": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/target/release/wechat_multi_chat_rust (deleted)",
+  "backup": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/backups/pre_reply_only_fix_20260713_183434/wechat_multi_chat_rust",
+  "old_size": 1968840,
+  "backup_size": 1968840,
+  "old_sha256": "7c79d796ef1064b21524f984bd6e06684ea1b209d2c4fd40dc1a597328c53070",
+  "new_sha256": "c78b08a8cb45d4488e686bc86ac5d93bf67a515ef3cb99a60259d387ddbbf1f4",
+  "created_at": "2026-07-13T18:34:34.738125"
+}

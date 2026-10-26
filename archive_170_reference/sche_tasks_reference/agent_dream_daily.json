@@ -1,0 +1,7 @@
+{
+  "schedule": "01:15",
+  "repeat": "daily",
+  "enabled": true,
+  "max_delay_hours": 20,
+  "prompt": "现在是每天凌晨的做梦复盘自动启动时间。\n\n第一步：立刻用 update_working_checkpoint 记录本次 scheduler 注入的报告路径，避免长任务中遗忘。\n\n第二步：运行以下命令，把 scheduler 注入的报告路径替换到 --report 后面：\n```\n/home/aimcafe/GA_Instances/xinghui-ga/venv/bin/python /home/aimcafe/GA_Instances/xinghui-ga/scripts/run_dream_retry_notify.py --report <本次报告路径> --notify-retry\n```\n\n执行规则：\n- 1:15 首次启动官方原生自我复盘 + 旁路 dream_system 增补。\n- 如果因为真实模型/上游接口未可用而只得到 fallback 或错误结果，脚本会等到 1:45 再复盘；之后每半小时重试一次。\n- 到 3:45 仍失败就暂停自动重试，等待言言手动发起做梦要求。\n- 无论成功或最终失败，都把结果发到飞书，并把完整执行报告写入本定时任务要求的报告路径。\n\n边界：不要修改任何官方 GA 原生文件；旁路 dream_system 只负责生成梦境上下文与 user 事实候选，默认不自动写稳定事实记忆。"
+}

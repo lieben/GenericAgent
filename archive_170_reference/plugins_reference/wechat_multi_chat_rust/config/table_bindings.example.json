@@ -1,0 +1,23 @@
+{
+  "bindings": {
+    "Msg_REPLACE_WITH_YOUR_TABLE_HASH_1": {
+      "wechat_title": "示例群聊1",
+      "target_id": "group-example-1",
+      "verified_at": "2026-XX-XX",
+      "verified_by": "live_db_tail_recent_messages"
+    },
+    "Msg_REPLACE_WITH_YOUR_TABLE_HASH_2": {
+      "wechat_title": "示例群聊2",
+      "target_id": "group-example-2",
+      "verified_at": "2026-XX-XX",
+      "verified_by": "live_db_tail_recent_messages"
+    },
+    "Msg_REPLACE_WITH_YOUR_TABLE_HASH_3": {
+      "wechat_title": "示例私聊",
+      "target_id": "private-example",
+      "verified_at": "2026-XX-XX",
+      "verified_by": "live_db_tail_recent_messages"
+    }
+  },
+  "_comment": "朋友需要做的操作：1. 破解本地微信获取数据库路径  2. 找到对应的消息表名（Msg_xxx 格式）  3. 复制本文件到 table_bindings.json  4. 替换表名、群聊/私聊标题、target_id"
+}

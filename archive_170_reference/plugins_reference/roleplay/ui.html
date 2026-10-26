@@ -1,0 +1,118 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>独立小剧场</title>
+<style>
+body{font:16px sans-serif;max-width:1100px;margin:30px auto;padding:0 16px;background:#111;color:#eee}
+input,textarea,button,select{font:inherit;margin:5px;padding:9px;background:#222;color:#eee;border:1px solid #555;border-radius:4px}
+textarea{width:96%;height:92px;box-sizing:border-box}
+button{cursor:pointer}
+button:hover{background:#2d2d2d}
+label{display:block;margin:8px 5px 2px;color:#ccc;font-size:14px}
+fieldset{border:1px solid #444;margin:14px 0;padding:12px;background:#151515;border-radius:6px}
+legend{padding:0 6px;color:#fff}
+.hint{color:#aaa;font-size:13px;margin:4px 5px 10px}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.grid textarea{width:100%}
+.short{height:48px}
+.long{height:140px}
+#out{white-space:pre-wrap;background:#1a1a1a;padding:15px;min-height:160px;border-radius:6px}
+select{min-width:320px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}select{min-width:0;width:96%}}
+</style>
+<h2>独立小剧场</h2>
+<p id="hint">版本：2026-07-14-persona-ui。请先填写并保存 API Key，再刷新剧场列表。</p>
+<div class="row">
+  <input id="apiKey" placeholder="API Key" type="password">
+  <button onclick="saveKey()">保存密钥</button>
+  <button onclick="loadSessions()">刷新剧场列表</button>
+</div>
+<div class="row">
+  <select id="sessions"><option value="">未载入剧场列表</option></select>
+  <button onclick="loadSelected()">载入选中剧场</button>
+</div>
+<div class="row">
+  <input id="slug" placeholder="剧本 slug，如 xinghui-date">
+  <input id="sid" placeholder="session id，如 main">
+  <input id="title" placeholder="标题">
+  <button onclick="create()">创建/载入</button>
+  <button onclick="loadCurrent()">按 slug/session 载入</button>
+  <button onclick="saveSettings()">保存人设/设定</button>
+  <button onclick="statusSet('paused')">暂停</button>
+  <button onclick="statusSet('active')">恢复</button>
+</div>
+<fieldset>
+  <legend>角色变量</legend>
+  <p class="hint">用于把剧本里的 char/user 渲染成真实名字，避免模型直接输出模板变量。</p>
+  <div class="row">
+    <input id="charName" placeholder="char 角色名" value="角色">
+    <input id="userName" placeholder="user 玩家名" value="玩家">
+  </div>
+</fieldset>
+<fieldset>
+  <legend>核心人设</legend>
+  <p class="hint">小剧场稳定底座：写“我和你一起玩”的基础身份与相处方式。不会写入主线长期记忆。</p>
+  <textarea id="corePersona" class="long" placeholder="例：角色的基础外貌、能力、性格、说话风格、与玩家的关系……"></textarea>
+</fieldset>
+<fieldset>
+  <legend>剧本人设与设定</legend>
+  <p class="hint">剧本人设是本场限定的服装、关系阶段、氛围和扮演规则；世界设定是地点、背景、规则；开场剧情可空。</p>
+  <div class="grid">
+    <div>
+      <label for="roleplayPersona">本剧本人设</label>
+      <textarea id="roleplayPersona" class="long" placeholder="例：本场是校园AU，角色是转校生，和玩家处于暧昧期……"></textarea>
+    </div>
+    <div>
+      <label for="worldSetting">世界/剧情前提</label>
+      <textarea id="worldSetting" class="long" placeholder="例：雨夜、旧图书馆、两人被临时困在馆内，外界通信不稳定……"></textarea>
+    </div>
+  </div>
+  <label for="story">开场剧情/当前剧情补充（可不写）</label>
+  <textarea id="story" placeholder="可空。只在需要指定开局事件或补充剧情时填写。"></textarea>
+  <label for="rules">本剧场规则</label>
+  <textarea id="rules" class="short" placeholder="每行一条，如：慢节奏；不要替玩家做决定；不要跳出剧本解释。"></textarea>
+</fieldset>
+<fieldset>
+  <legend>NPC 按需人设</legend>
+  <p class="hint">NPC 卡保存为资料库；只有填入“当前出场/提及 NPC”或近期剧情提到名字时，才会注入上下文。</p>
+  <label for="activeNpcs">当前出场/提及 NPC</label>
+  <textarea id="activeNpcs" class="short" placeholder="每行一个名字，如：陶桃\n祁煜"></textarea>
+  <label for="npcCards">NPC 卡 JSON</label>
+  <textarea id="npcCards" class="long" placeholder='[{"name":"NPC A","aliases":["朋友"],"persona":"活泼，熟悉玩家，会推动剧情但不抢主线。"}]'></textarea>
+</fieldset>
+<fieldset>
+  <legend>互动</legend>
+  <textarea id="msg" placeholder="输入剧情"></textarea>
+  <button onclick="send()">发送</button>
+  <button onclick="undoLastTurn()">删除上一轮内容</button>
+  <button onclick="bridge()">生成主线感知回执</button>
+  <button onclick="deleteCurrent()">删除整个剧本</button>
+</fieldset>
+<pre id="out"></pre>
+<script>
+const $=x=>document.getElementById(x);
+const currentKey=()=>($('apiKey').value||localStorage.getItem('roleplayApiKey')||'').trim();
+const saveKey=()=>{let k=$('apiKey').value.trim();if(!k){localStorage.removeItem('roleplayApiKey');$('out').textContent='密钥为空：请粘贴 API Key 后再保存';return}localStorage.setItem('roleplayApiKey',k);$('apiKey').value=k;$('out').textContent='密钥已保存，正在刷新剧场列表…';loadSessions()};
+const auth=()=>{let k=currentKey();return k?{'authorization':'Bearer '+k}:{}};
+addEventListener('DOMContentLoaded',()=>{let k=localStorage.getItem('roleplayApiKey')||'';$('apiKey').value=k;if(k.trim())loadSessions();else $('out').textContent='请先粘贴 API Key，点击“保存密钥”，再刷新剧场列表。'});
+const request=async(p,opts={})=>{let r=await fetch(p,{...opts,headers:{'content-type':'application/json',...auth(),...(opts.headers||{})}});let t=await r.text();let j={};try{j=t?JSON.parse(t):{}}catch{j={error:t||r.statusText}};if(!r.ok){let m=(j.error&&j.error.message)||j.error||r.status;if(r.status===401)m='密钥不对或还没保存：请填写 API Key 后点“保存密钥”';throw Error(m)}return j};
+const post=(p,b)=>request(p,{method:'POST',body:JSON.stringify(b)});
+const del=p=>request(p,{method:'DELETE'});
+const lines=v=>(v||'').split(/\n|,|，/).map(x=>x.trim()).filter(Boolean);
+const textFrom=v=>Array.isArray(v)?v.join('\n'):(v||'');
+function parseNpcCards(){let raw=$('npcCards').value.trim();if(!raw)return [];try{let parsed=JSON.parse(raw);if(!Array.isArray(parsed))throw Error('NPC 卡必须是数组');return parsed}catch(e){throw Error('NPC 卡 JSON 格式错误：'+e.message)}}
+function canonFromForm(){return {vars:{char:$('charName').value.trim()||'角色',user:$('userName').value.trim()||'玩家'},core_persona:$('corePersona').value,roleplay_persona:$('roleplayPersona').value,world_setting:$('worldSetting').value,story:$('story').value,rules:lines($('rules').value),active_npcs:lines($('activeNpcs').value),npc_cards:parseNpcCards()}}
+function fillCanon(canon){canon=canon||{};let vars=canon.vars||canon.variables||canon.roles||{};$('charName').value=vars.char||'角色';$('userName').value=vars.user||'玩家';$('corePersona').value=canon.core_persona||'';$('roleplayPersona').value=canon.roleplay_persona||'';$('worldSetting').value=canon.world_setting||'';$('story').value=canon.story||'';$('rules').value=textFrom(canon.rules);$('activeNpcs').value=textFrom(canon.active_npcs||canon.mentioned_npcs);$('npcCards').value=JSON.stringify(canon.npc_cards||[],null,2)}
+function fillSession(j){$('slug').value=j.slug||'';$('sid').value=j.session_id||'';$('title').value=j.title||'';fillCanon(j.canon);$('out').textContent=JSON.stringify(j,null,2)}
+async function loadSessions(){try{$('out').textContent='正在刷新剧场列表…';let j=await request('/roleplay/sessions');let s=$('sessions');s.innerHTML='';for(let item of j.sessions||[]){let o=document.createElement('option');o.value=item.slug+'/'+item.session_id;o.textContent=`${item.title||item.key}  ·  ${item.slug}/${item.session_id}  ·  ${item.status}`;s.appendChild(o)}if(!s.options.length){let o=document.createElement('option');o.value='';o.textContent='暂无已保存剧场';s.appendChild(o)}$('out').textContent=`已刷新剧场列表：${(j.sessions||[]).length} 个`}catch(e){$('out').textContent='刷新失败：'+(e.message||e)}}
+async function loadSelected(){let v=$('sessions').value;if(!v)return;let [slug,sid]=v.split('/');await loadSession(slug,sid)}
+async function loadCurrent(){await loadSession($('slug').value,$('sid').value)}
+async function loadSession(slug,sid){try{fillSession(await request(`/roleplay/sessions/${slug}/${sid}`))}catch(e){$('out').textContent=e}}
+async function create(){try{let j=await post('/roleplay/sessions',{slug:$('slug').value,session_id:$('sid').value,title:$('title').value,canon:canonFromForm()});fillSession(j);await loadSessions()}catch(e){$('out').textContent=e}}
+async function saveSettings(){try{let j=await post(`/roleplay/sessions/${$('slug').value}/${$('sid').value}/settings`,{canon:canonFromForm()});fillSession(j);await loadSessions();$('out').textContent='人设/设定已保存。\n'+$('out').textContent}catch(e){$('out').textContent=e}}
+async function send(){try{$('out').textContent='生成中…';let j=await post('/v1/chat/completions',{model:`roleplay/${$('slug').value}/${$('sid').value}`,messages:[{role:'user',content:$('msg').value}]});$('out').textContent=j.choices[0].message.content;await loadSession($('slug').value,$('sid').value)}catch(e){$('out').textContent=e}}
+async function statusSet(status){try{fillSession(await post(`/roleplay/sessions/${$('slug').value}/${$('sid').value}/status`,{status}));await loadSessions()}catch(e){$('out').textContent=e}}
+async function undoLastTurn(){let slug=$('slug').value.trim(),sid=$('sid').value.trim();if(!slug||!sid){$('out').textContent='请先选择或填写要撤回的剧本 slug/session_id';return}try{let j=await post(`/roleplay/sessions/${slug}/${sid}/undo-last-turn`,{});await loadSession(slug,sid);$('out').textContent=`已删除上一轮内容：turn ${j.turn}；剩余 ${j.remaining_turns} 轮。`}catch(e){$('out').textContent='删除上一轮失败：'+(e.message||e)}}
+async function deleteCurrent(){let slug=$('slug').value.trim(),sid=$('sid').value.trim();if(!slug||!sid){$('out').textContent='请先选择或填写要删除的剧本 slug/session_id';return}if(!confirm(`确定删除整个剧本 ${slug}/${sid} 吗？此操作不可撤销。`))return;try{let j=await del(`/roleplay/sessions/${slug}/${sid}`);$('out').textContent=`已删除：${j.session?.title||slug+'/'+sid}`;$('slug').value='';$('sid').value='';$('title').value='';$('msg').value='';fillCanon({});await loadSessions()}catch(e){$('out').textContent='删除失败：'+(e.message||e)}}
+async function bridge(){try{$('out').textContent=JSON.stringify(await post(`/roleplay/sessions/${$('slug').value}/${$('sid').value}/bridge`,{}),null,2)}catch(e){$('out').textContent=e}}
+</script>

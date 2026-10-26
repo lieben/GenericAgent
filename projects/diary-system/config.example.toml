@@ -1,0 +1,15 @@
+# Diary System Configuration Template
+# All deployment-specific paths are supplied by the Agent environment.
+
+[storage]
+vault_dir = "${DIARY_VAULT_DIR}"
+vault_name = "${DIARY_VAULT_NAME}"
+diary_folder = "Diary"
+
+[mempalace]
+enabled = false
+sync_url = "${MEMPALACE_SYNC_URL}"
+
+[format]
+title_prefix = "📔 "
+time_format = "%Y-%m-%d %H:%M"

@@ -1,0 +1,69 @@
+{
+  "agent": {
+    "display_name": "BotName",
+    "session_key": "xinghui:main",
+    "generation_timeout_s": 5,
+    "llm_no": 0
+  },
+  "poll": {
+    "loop_interval_ms": 100,
+    "batch_limit": 20,
+    "echo_check_delay_ms": 10,
+    "low_poll_interval_s": 2,
+    "high_poll_interval_s": 1,
+    "skip_downgrade_threshold": 2
+  },
+  "adapters": {
+    "db_tail": "tests/mock_adapters/mock_db_tail.py",
+    "flash_decide": "adapters/rust_flash_decide.py",
+    "llm_generate": "tests/mock_adapters/mock_llm_generate.py",
+    "wechat_send": "tests/mock_adapters/mock_wechat_send.py"
+  },
+  "targets": [
+    {
+      "id": "mock-group-direct",
+      "kind": "group",
+      "enabled": true,
+      "wechat_title": "测试群A",
+      "db_identity": "测试群A",
+      "session_key": "xinghui:main",
+      "min_reply_interval_s": 0,
+      "allow_autonomous": true,
+      "auto_send": false,
+      "rules": {"must_reply_on_at": true, "keywords": ["BotName", "Bot"]},
+      "mock_messages": [
+        {"seq": 1, "sender": "群友甲", "text": "BotName你在吗", "is_self": false}
+      ]
+    },
+    {
+      "id": "mock-group-skip",
+      "kind": "group",
+      "enabled": true,
+      "wechat_title": "测试群B",
+      "db_identity": "测试群B",
+      "session_key": "xinghui:main",
+      "min_reply_interval_s": 0,
+      "allow_autonomous": true,
+      "auto_send": false,
+      "rules": {"must_reply_on_at": true, "keywords": ["BotName", "Bot"]},
+      "mock_messages": [
+        {"seq": 1, "sender": "群友乙", "text": "今天晚饭吃什么", "is_self": false}
+      ]
+    },
+    {
+      "id": "mock-private",
+      "kind": "private",
+      "enabled": true,
+      "wechat_title": "UserAlias私聊测试",
+      "db_identity": "UserAlias私聊测试",
+      "session_key": "xinghui:main",
+      "min_reply_interval_s": 0,
+      "allow_autonomous": true,
+      "auto_send": false,
+      "rules": {"must_reply_on_at": false, "keywords": []},
+      "mock_messages": [
+        {"seq": 1, "sender": "UserAlias", "text": "继续测试私聊", "is_self": false}
+      ]
+    }
+  ]
+}

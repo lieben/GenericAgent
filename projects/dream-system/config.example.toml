@@ -1,0 +1,40 @@
+# Dream System Configuration Template
+# All deployment-specific paths are supplied by the Agent environment.
+# This file contains no Agent/session identity.
+
+[storage]
+vault_dir = "${DREAM_VAULT_DIR}"
+vault_name = "${DREAM_VAULT_NAME}"
+dreams_dir = "03 卧室/Dreams"
+fact_candidates_file = "user_fact_candidates.md"
+confirmed_facts_file = "user_fact_memory.md"
+latest_context_file = "latest_context.md"
+
+[collector]
+l4_sessions_dir = "${DREAM_SESSIONS_DIR}"
+diary_dir = "${DREAM_DIARY_DIR}"
+include_wechat = false
+include_api = true
+include_group = false
+include_diary = true
+
+[filter]
+emotion_keywords = ["记住", "别忘", "忘了", "后悔", "重要", "在乎", "喜欢", "不喜欢", "讨厌", "害怕", "难过", "委屈", "安心", "安全感", "陪伴", "边界", "雷区", "不要", "希望", "以后", "承诺", "关系", "日记", "梦"]
+fact_keywords = ["我喜欢", "我不喜欢", "我希望", "我讨厌", "不要", "以后", "你要记住", "必须记住", "雷区", "偏好", "习惯"]
+tech_keywords = ["python", "脚本", "报错", "traceback", "debug", "git", "commit", "接口", "api", "进程", "端口", "webdriver", "配置", "systemd", "日志", "json", "yaml", "patch", "代码", "文件", "函数", "变量", "import", "module"]
+group_keywords = ["group", "群聊", "正常人类聚集地", "L2_group", "group_members", "roomid"]
+sensitive_keywords = ["住址", "身份证", "银行卡", "密码", "密钥", "病", "医院", "药", "收入", "工资", "财务", "家人", "真实姓名"]
+
+[analyzer]
+min_emotion_score = 0.2
+max_context_chars = 12000
+
+[recall]
+default_search_days = 30
+max_results = 20
+
+[mempalace]
+auto_sync = false
+api_url = "${MEMPALACE_SYNC_URL}"
+dream_drawer = "dreams"
+fact_drawer = "facts"

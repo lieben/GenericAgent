@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.bak_*
+*.bak
+*.log
+runtime/
+config/frontend_mode_config.json
+!config/frontend_mode_config.example.json
+config/plugin_prompts.json
+!config/plugin_prompts.example.json
+config/api_config.json
+!config/api_config.example.json

@@ -1,0 +1,15 @@
+# Diary System Configuration
+
+[storage]
+vault_dir = "${DIARY_VAULT_DIR}"
+vault_name = "${DIARY_VAULT_NAME}"
+diary_folder = "03 卧室/Diary"
+
+[mempalace]
+enabled = true
+sync_url = "${MEMPALACE_SYNC_URL}"
+# 启用后会自动同步日记摘要到MemPalace建立索引
+
+[format]
+title_prefix = "📔 "
+time_format = "%Y-%m-%d %H:%M"

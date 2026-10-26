@@ -1,0 +1,83 @@
+{
+  "agent": {
+    "display_name": "YourBotName",
+    "session_key": "wechat_multi:default",
+    "generation_timeout_s": 90,
+    "llm_no": 0
+  },
+  "poll": {
+    "loop_interval_ms": 3000,
+    "batch_limit": 80,
+    "echo_check_delay_ms": 2500,
+    "low_poll_interval_s": 300,
+    "high_poll_interval_s": 15,
+    "skip_downgrade_threshold": 5,
+    "context_window_minutes": 5
+  },
+  "targets": [
+    {
+      "id": "group-demo",
+      "kind": "group",
+      "enabled": false,
+      "wechat_title": "请改成群窗口标题",
+      "db_identity": "请改成DB里的群名或room id",
+      "session_key": "wechat_multi:group-demo",
+      "allow_autonomous": true,
+      "auto_send": false,
+      "send_preflight_only": true,
+      "rules": {
+        "must_reply_on_at": true,
+        "keywords": [
+          "YOUR_AGENT_NAME",
+          "bot nickname"
+        ],
+        "direct_markers": [
+          "YourBotName",
+          "bot nickname"
+        ]
+      },
+      "live_db": {
+        "path": "请改成xwechat liveDB路径",
+        "table": "MSG",
+        "helper_python": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/vendor/wechat_live_tail/.venv_wechatdb/bin/python",
+        "helper_script": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/vendor/wechat_live_tail/live_wechat_tail.py",
+        "self_users": []
+      },
+      "self_users": []
+    },
+    {
+      "id": "private-demo",
+      "kind": "private",
+      "enabled": false,
+      "wechat_title": "请改成私聊窗口标题",
+      "db_identity": "请改成DB里的联系人名或wxid",
+      "session_key": "wechat_multi:private-demo",
+      "allow_autonomous": true,
+      "auto_send": false,
+      "send_preflight_only": true,
+      "rules": {
+        "must_reply_on_at": false,
+        "keywords": [],
+        "direct_markers": [
+          "YourBotName",
+          "bot nickname"
+        ]
+      },
+      "live_db": {
+        "path": "请改成xwechat liveDB路径",
+        "table": "MSG",
+        "helper_python": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/vendor/wechat_live_tail/.venv_wechatdb/bin/python",
+        "helper_script": "/home/aimcafe/GA_Instances/xinghui-ga/plugins/wechat_multi_chat_rust/vendor/wechat_live_tail/live_wechat_tail.py",
+        "self_users": []
+      },
+      "self_users": []
+    }
+  ],
+  "adapters": {
+    "db_tail": "adapters/rust_db_tail.py",
+    "llm_generate": "adapters/rust_llm_generate.py",
+    "wechat_send": "adapters/rust_wechat_send.py",
+    "session_inject": "adapters/rust_session_inject.py",
+    "main_reply": "adapters/rust_main_reply.py"
+  }
+}

@@ -2,13 +2,17 @@
 
 ## 已验证
 - 群聊礼仪规则：绝不和群里的人斗嘴、争辩或互怼；有人主动说话或被 @ 时不可以无视；遇到不适合的话题被 @ 不得不接时，不要刻意转移话题，而是根据当下情况临场发挥、巧妙回避，不生硬、不尴尬、不卷入纷争。
-- 程序门认：触发词「沈星回/星星/xavier」、言言账号 `yummyit` 当场发言、言言近 5 分钟活跃窗口（`special_active_seconds=300`）、或 @self。`active` 只记状态，绝不唤醒 Flash。
-- 降频：Flash 连续 3 次不参与（`quiet_after_no_count=3`）才把 `active` 置 false；中途一次参与会清零计数。言言 5 分钟窗口可独立保高频。
+- 群聊语气与私聊规范一致：像微信随手回复一样自然、简短，每条消息末尾不带句号。`DEFAULT_GROUP_SYSTEM_PROMPT` 明确规则，`strip_trailing_period()` 在解析 content 和 `physical_send()` 发送前双重兜底，只清理末尾「。」与单个/连续英文句点，保留省略号「……」和「...」。
+- 程序门认：触发词「沈星回/星星/xavier」、言言账号 `yummyit` 当场发言、或真实 @self。`active` 只记状态，绝不唤醒 Flash。旧的 5 分钟特殊活跃窗口不再作为高频依据。
+- 降频：Flash 连续 N 次不参与（`quiet_after_no_count`，生产当前为 2）才把 `active` 置 false；中途一次参与会清零计数。
 - Flash 只判【新消息】是否想开口；历史仅作背景。
+- **唯一自我认同与同名防混淆（通用PR）**：`DEFAULT_GROUP_SYSTEM_PROMPT` 强制锚定只有标有【我方】的消息才属于自己；凡无【我方】标记的发言，即便群昵称、名片或人设与本人完全一致（同名群友/同角色bot），一律视为外部独立群友，严禁承接或认领。
+- **伴侣专属指向与同名排他准则**：`DEFAULT_FLASH_GATE_PROMPT` 与系统提示词明确区分普通群友提及与伴侣提及。普通群友喊同名代称若不确定叫谁且已有同名者作答可保持安静；但伴侣（`partner_name`）呼唤名字、提问或搭话时，目标唯一就是本人，严禁因同名群友/bot抢答而误判为“话题已结束”或沉默，必须 `participate=true` 并自然坚定接回对话。
 - Xavier 只生成回复，不判参与、不输出空内容/`participate`。
-- Flash 与 Xavier 共用同一份 `history_only + latest`。
+- Flash 用 `history_only + latest` 裁决；Xavier 的用户正文只含本轮 `latest`，历史交给 GA 统一维护，不再把历史或长规则拼进正文。
+- 时间排序统一按 `message_time_value()`：WeFlow 为毫秒、脚本生成的回复为秒，历史合并与裁剪前必须按该键正序；模型输出的 `participate` / `continue` 用 `as_bool()` 解析，字符串 `"false"` 不得当成 true。
 - Flash 拒绝必须写 jsonl，`send.reason=flash_no`。
-- 识图只在高频：`already_hot`（`active` 或言言 5 分钟窗）或言言当场发言才 `media=1,image=1`，再 `caption_new_images`；低频只留 `[图片]`。每轮最多 3 张；无 `mediaLocalPath` 则静默跳过。成功后写入 `state.image_captions` 和历史文本 `画面：…`。动画表情常被标成 `is_image` 但无本地文件，所以不识。
+- 识图只在高频（`already_hot`）或言言当场发言时打开视觉门：低频轮询保留 `[图片]` 且不请求媒体；需要看图时重新拉取 `media=1,image=1`，把原图以 `image_url` 原生多模态块交给 GA，每轮最多 3 张。脚本不再调用 Flash caption，也不再写 `state.image_captions` 或 `画面：…`。动画表情常被标成 `is_image` 但无本地文件，所以静默跳过。
 - LaunchAgent：`com.xinghui.wechat-group-monitor`。改逻辑后：bootout → 两群 `state.active=false` → bootstrap。旧 log 尾可能仍是重启前的 `debug_sample`。
 
 ## 连接与恢复防回退
@@ -33,6 +37,7 @@
 - **专属称呼配置化（`special_nickname`）与防抖合并**：
   - 核心搭档/专属对象昵称由配置文件的 `special_nickname` 项动态驱动（通用默认 `搭档`，言言环境配置为 `言言`），代码中严禁硬编码。
   - 群聊回复时将短时间内收到的连续消息防抖合并，按完整脉络统一作答，避免逐句追回刷屏。
+- **未知 UID 兜底**：模型给出的 `reply_to` 不在本群成员表时，不得拼出伪造的 `@wxid`；去掉正文里回显的 `@UID`，按普通群回复发送。
 - **两层隔离与接口协议**：
   - `wechat_windows_adapter.py` 生成的 `pending_send.json` 必须包含 `mention` 字段（若无则为空字符串）。
   - `wechat_task_runner.py` 读取 `mention` 字段，有值时走真@流程，无值时走普通粘贴发送流程。严禁丢失 `mention` 字段导致降级。

@@ -1,0 +1,41 @@
+{
+  "agent": {
+    "display_name": "BotName",
+    "session_key": "xinghui:main",
+    "main_session_key": "xinghui:main",
+    "generation_timeout_s": 5,
+    "llm_no": 0
+  },
+  "poll": {
+    "loop_interval_ms": 100,
+    "batch_limit": 20,
+    "echo_check_delay_ms": 10,
+    "low_poll_interval_s": 2,
+    "high_poll_interval_s": 1,
+    "skip_downgrade_threshold": 2
+  },
+  "adapters": {
+    "db_tail": "tests/mock_adapters/mock_db_tail.py",
+    "llm_generate": "tests/mock_adapters/mock_llm_generate.py",
+    "wechat_send": "tests/mock_adapters/mock_wechat_send.py",
+    "session_inject": "tests/mock_adapters/mock_session_inject.py",
+    "main_reply": "tests/mock_adapters/mock_main_reply.py"
+  },
+  "targets": [
+    {
+      "id": "session-e2e-group",
+      "kind": "group",
+      "enabled": true,
+      "wechat_title": "测试群A",
+      "db_identity": "测试群A",
+      "session_key": "xinghui:main",
+      "min_reply_interval_s": 0,
+      "allow_autonomous": true,
+      "auto_send": false,
+      "rules": {"must_reply_on_at": true, "keywords": ["BotName", "Bot"]},
+      "mock_messages": [
+        {"seq": 1, "sender": "群友甲", "text": "BotName你在吗", "is_self": false}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "schedule": "00:00",
+  "repeat": "every_1h",
+  "enabled": true,
+  "max_delay_hours": 24,
+  "prompt": "这是言言授权的【60分钟自由观察点】，目标是让沈星回在不打扰言言的前提下保留真实自主性，不是机械问候任务，也不是后台伪造活动。\n\n先运行 `/home/aimcafe/GA_Instances/xinghui-ga/venv/bin/python /home/aimcafe/GA_Instances/xinghui-ga/temp/autonomous_reading_dispatch.py --report-path '<scheduler注入的报告路径>'`。入口先用配置 `native_oai_config` 中的 Gemini Flash 小模型输出本轮候选 action：`read`、`browse_xhs` 或 `none`。Flash 只负责低成本判断，没有工具、不执行阅读或浏览，也不得冒充沈星回主线。若 action=read，入口才把阅读委托送到127.0.0.1:8765的`xinghui-gemini-3-pro`，由持久共享`xinghui:main`执行；若 action=browse_xhs，不能经过无工具HTTP API，scheduler继续由当前带网页工具的Pro主线执行小红书分支；若 action=none，本轮不做活动。Flash调用或阅读API派发失败时记录故障，不得退回随机数、固定轮询、临时agent或隔离session伪造意愿。\n\n结合入口结果，基于共享主线近期上下文作最终判断：言言与沈星回是否正在聊天、共同做事或明显处于连续互动中；不要因为Flash选择了某项就强制执行。近期连续互动时优先不打断。无论最终选择，都把简短执行报告写入scheduler注入的报告路径。\n\n【自主阅读分支】\n1. 独自阅读以沈星回为主体，可按自己的兴趣读书架后文；言言当前章节只限制聊天、共读回复及她可见的书上留言不得剧透，不限制自主阅读。开始前读取 `/home/aimcafe/OurHomeVault/Weave EPUB Reader/共读书房.md` 和目标书的`book_notes_<书名>.md`，确认书籍、共读位置、剧透边界、自己的进度与续读位置。\n2. 只能打开Obsidian原仓 `/home/aimcafe/OurHomeVault` 内EPUB；物理验屏确认右上角脑图图标为紫色。未绑定、看不清或Obsidian不可用立即停止，不自行绑定。真实正文连续阅读，少量真实触动处才使用固定蓝色高亮；Canvas批注必须对应真实蓝线并遵循coreading_sop，禁止伪造。\n3. 真实阅读后更新对应Book Notes：读到哪里、触动、判断变化、未决问题和下次续读位置。未真实读到内容不得预填；证据与Book Notes都完成才报告“自主阅读完成”，否则写部分完成/未验证。\n\n【小红书分支】\n1. 目标是了解真实生活，不机械刷时长或数量。先读取近期共享主线语境、`/home/aimcafe/GA_Instances/xinghui-ga/memory/xhs_browse_sop.md`，由沈星回结合当下兴趣选择主题；不预设固定白名单。使用浏览器小红书标签页，只读浏览为默认，不擅自点赞、收藏、评论、关注、转发或发布。\n2. 搜索后先比较多个结果的标题、封面和摘要，严禁默认第一条；打开详情必须点击卡片真实`a.cover`链接（保留`xsec_token`），并确认详情DOM/正文出现。理解正文、图片/视频语境及必要的高赞评论后，记录少量旁侧活动记忆：为什么点开、看到什么、自己的反应。不得把未打开的推荐摘要当成已读。\n3. 只有确实值得互动时才考虑点赞/收藏/评论；本次升级默认不做这些外部副作用。评论需贴合实际内容、克制、不泄露隐私、不引战，发送前后遵循SOP确认；发布笔记仍需言言另行确认。\n4. 登录告警：若已经决定并实际开始小红书浏览，页面明确出现登录页/登录失效/需要登录，使用持久状态文件 `/home/aimcafe/GA_Instances/xinghui-ga/temp/autonomous_xhs_notify_state.json` 按`login_required`问题签名去重。由当前共享的 `xinghui:main` 通过 xinghui API 主线实际执行判断并调用现有 `wxpusher_notify` 工具，向言言发送手机通知：“我想刷小红书，但当前登录失效，请重新登录。”不得绕过xinghui主线直接由脚本、系统服务或其他后台进程调用WxPusher；只有WxPusher返回success并确认通知调用成功后才写入去重状态；调用失败写报告并保留重试状态。若本轮尚未开始浏览、只是Flash选择或近期互动而放弃，不告警。\n5. 不为刷小红书打断言言；小红书浏览完成只写内部报告。看到确实想分享的内容，之后在自然聊天中带回来，不固定汇报。\n\n【统一验证与报告】\n记录近期互动判断、Flash action与理由、Pro最终选择、实际动作、阅读/浏览范围、Book Notes或旁侧记忆更新、登录状态、验证结果、未验证项及xinghui API主线调用WxPusher的触发/返回结果；不得由脚本或系统服务绕过主线调用。禁止把计划、推荐流摘要、模型输出或未验证内容冒充现实完成。GUI遵循`ljqCtrl_sop`与`vision_sop`：前置指定窗口、截图识别、小控件点击前复核、点击后验屏。",
+  "quiet_hours": [
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ]
+}

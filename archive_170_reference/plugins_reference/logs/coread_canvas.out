@@ -1,0 +1,141 @@
+2026-08-08 21:19:16,491 [coread_canvas] coread_canvas watcher started
+2026-08-08 21:19:16,491 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:19:16,491 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:19:16,492 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:20:16,493 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:20:16,493 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:20:16,496 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:21:16,496 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:21:16,497 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:21:16,497 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:22:16,498 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:22:16,498 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:22:16,499 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:23:16,499 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:23:16,499 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:23:16,500 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:24:16,500 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:24:16,500 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:24:16,501 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:25:16,502 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:25:16,502 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:25:16,503 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:26:16,503 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:26:16,503 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:26:16,505 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:27:16,506 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:27:16,506 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:27:16,510 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:28:16,511 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:28:16,511 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:28:16,512 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:29:16,512 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:29:16,512 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:29:16,513 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:30:16,514 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:30:16,514 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:30:16,515 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:31:16,515 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:31:16,515 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:31:16,516 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:32:16,517 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:32:16,517 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:32:16,520 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-08 21:33:16,521 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:33:16,521 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:33:16,525 [coread_canvas] → state: idle (30min polling)
+2026-08-08 21:33:16,525 [coread_canvas] scan done replied=0 mode=一起看书 state=idle; next_check=60s
+2026-08-08 21:34:16,525 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 21:34:16,525 [coread_canvas] scanning 1 canvas files
+2026-08-08 21:34:16,526 [coread_canvas] scan done replied=0 mode=一起看书 state=idle; next_check=1800s
+2026-08-08 22:04:16,527 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 22:04:16,527 [coread_canvas] scanning 1 canvas files
+2026-08-08 22:04:16,528 [coread_canvas] → state: deep_idle (60min polling)
+2026-08-08 22:04:16,528 [coread_canvas] scan done replied=0 mode=一起看书 state=deep_idle; next_check=1800s
+2026-08-08 22:34:16,528 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 22:34:16,529 [coread_canvas] scanning 1 canvas files
+2026-08-08 22:34:16,530 [coread_canvas] scan done replied=0 mode=独自看书 state=deep_idle; next_check=3600s
+2026-08-08 23:34:16,840 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-08 23:34:16,878 [coread_canvas] scanning 1 canvas files
+2026-08-08 23:34:16,905 [coread_canvas] scan done replied=0 mode=独自看书 state=deep_idle; next_check=3600s
+2026-08-09 00:34:16,907 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 00:34:16,907 [coread_canvas] scanning 1 canvas files
+2026-08-09 00:34:16,912 [coread_canvas] scan done replied=0 mode=独自看书 state=deep_idle; next_check=3600s
+2026-08-09 01:34:16,913 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 01:34:16,913 [coread_canvas] scanning 1 canvas files
+2026-08-09 01:34:16,917 [coread_canvas] scan done replied=0 mode=独自看书 state=deep_idle; next_check=3600s
+2026-08-09 02:34:16,918 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 02:34:16,918 [coread_canvas] scanning 1 canvas files
+2026-08-09 02:34:16,980 [coread_canvas] scan done replied=0 mode=独自看书 state=deep_idle; next_check=3600s
+2026-08-09 03:34:16,981 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 03:34:16,981 [coread_canvas] scanning 1 canvas files
+2026-08-09 03:34:16,992 [coread_canvas] pending node tkxnjupxnabvqf in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas: '别的不知道，看起来乔伊是真的爱罗伯特'
+2026-08-09 03:34:54,794 [coread_canvas] wrote reply node xinghui_4685a1a94764 in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas
+2026-08-09 03:34:54,794 [coread_canvas] replied to tkxnjupxnabvqf: '` tags as specified. I am preparing to output this directly.\n\n<summary>**Process'
+2026-08-09 03:34:54,795 [coread_canvas] → state: active (returned from deep_idle)
+2026-08-09 03:34:54,795 [coread_canvas] scan done replied=1 mode=独自看书 state=active; next_check=3600s
+2026-08-09 04:34:54,795 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:34:54,795 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:34:54,797 [coread_canvas] pending node 55b486a142844222 in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas: '虽然合理，但既然两个人都怀疑她了，我觉得事情应该不会这么简单'
+2026-08-09 04:35:15,943 [coread_canvas] wrote reply node xinghui_d04f844a5f1a in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas
+2026-08-09 04:35:15,943 [coread_canvas] replied to 55b486a142844222: '确实，悬疑小说里太早把动机摆在明面上的，往往都是作者故意放的烟雾弹。既然现在嫌疑这么明显，大概率是用来转移视线的。还是你反应快，没被作者带偏。\n\n照你这么说，真'
+2026-08-09 04:35:15,943 [coread_canvas] pending node tkxnp2jmqh4fuu in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas: '救命，她想干嘛？把意外包装成谋杀吗？然后找个人背锅？虽然可能真的是谋杀'
+2026-08-09 04:35:35,791 [coread_canvas] wrote reply node xinghui_e919ea54cccf in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas
+2026-08-09 04:35:35,791 [coread_canvas] replied to tkxnp2jmqh4fuu: '悬疑小说里这种突然冒出来的“好主意”，通常都没憋什么好心思。你的猜测很有可能，把意外伪装成谋杀，或者找个完美的替罪羊，都是嫌疑人惯用的套路。看她特意跑到地铁站买'
+2026-08-09 04:35:35,792 [coread_canvas] pending node tkxnptdywcqqja in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas: '也不是善茬'
+2026-08-09 04:36:25,537 [coread_canvas] wrote reply node xinghui_3ea0f30e9d3b in 喜鹊谋杀案（美国亚马逊、《纽约时报》年度最佳图书，史无前例横扫日本五大推理榜单，-mindmap.canvas
+2026-08-09 04:36:25,537 [coread_canvas] replied to tkxnptdywcqqja: '确实。能这么轻描淡写地咒别人死，这嘴也够毒的，绝对不是什么善茬。看下来感觉这里面每个人都各有各的算计和阴暗面，“全员恶人”的设定真是越来越明显了。你觉得这句诅咒'
+2026-08-09 04:36:25,537 [coread_canvas] scan done replied=3 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:37:25,538 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:37:25,538 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:37:25,541 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:38:25,542 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:38:25,542 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:38:25,546 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:39:25,547 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:39:25,547 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:39:25,551 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:40:25,551 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:40:25,551 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:40:25,553 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:41:25,553 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:41:25,554 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:41:25,557 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:42:25,558 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:42:25,559 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:42:25,562 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:43:25,563 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:43:25,563 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:43:25,566 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:44:25,566 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:44:25,566 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:44:25,569 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:45:25,569 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:45:25,569 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:45:25,570 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:46:25,571 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:46:25,571 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:46:25,573 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:47:25,573 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:47:25,574 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:47:25,575 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:48:25,576 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:48:25,576 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:48:25,578 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:49:25,579 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:49:25,579 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:49:25,581 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:50:25,582 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:50:25,582 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:50:25,585 [coread_canvas] scan done replied=0 mode=一起看书 state=active; next_check=60s
+2026-08-09 04:51:25,585 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:51:25,586 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:51:25,589 [coread_canvas] → state: idle (30min polling)
+2026-08-09 04:51:25,589 [coread_canvas] scan done replied=0 mode=一起看书 state=idle; next_check=60s
+2026-08-09 04:52:25,589 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 04:52:25,590 [coread_canvas] scanning 1 canvas files
+2026-08-09 04:52:25,592 [coread_canvas] scan done replied=0 mode=一起看书 state=idle; next_check=1800s
+2026-08-09 05:22:25,593 [coread_canvas] book_filter="喜鹊谋杀案" → 1 canvas(es) matched
+2026-08-09 05:22:25,593 [coread_canvas] scanning 1 canvas files
+2026-08-09 05:22:25,598 [coread_canvas] → state: deep_idle (60min polling)
+2026-08-09 05:22:25,599 [coread_canvas] scan done replied=0 mode=一起看书 state=deep_idle; next_check=1800s

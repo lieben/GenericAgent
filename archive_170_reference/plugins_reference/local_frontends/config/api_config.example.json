@@ -1,0 +1,19 @@
+{
+  "auth_token": "sk-your-token-here",
+  "default_port": 8765,
+  "model_session_map": {
+    "default-chat": "main:session",
+    "helper-chat": "helper:session"
+  },
+  "default_model": "default-chat",
+  "model_owner": "your-app-name",
+  "service_name": "your-app-name",
+  "user_agent": "your-app-name-openai-api/1.0",
+  "role_names": {
+    "system": "第三方平台系统提示",
+    "developer": "第三方平台开发者提示",
+    "user": "用户",
+    "assistant": "助手"
+  },
+  "api_status_text": "刚通过 OpenAI兼容API / 外部客户端聊天。"
+}

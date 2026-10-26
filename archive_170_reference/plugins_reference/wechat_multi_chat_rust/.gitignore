@@ -1,0 +1,40 @@
+# === 构建产物 ===
+/target/
+/Cargo.lock.bak*
+
+# === 运行时产物 ===
+/runtime/
+/logs/
+/shadow/
+/temp/
+
+# === Python缓存 / 虚拟环境 ===
+__pycache__/
+*.[cod]
+*.egg-info/
+.venv_wechatdb/
+vendor/wechat_live_tail/.venv_wechatdb/
+
+# === 配置备份 ===
+config/*.bak*
+config/*.backup*
+*.bak
+*.bak_*
+
+# === 编辑器 / 系统 ===
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# === 临时 / 产物 ===
+*.log
+*.tmp
+*.orig
+*.pid
+vendor/wechat_live_tail/dbkeys.local.json
+prompts/local/
+config/config.json
+config/table_bindings.json
+prompts/*.txt
+!prompts/templates/*.txt

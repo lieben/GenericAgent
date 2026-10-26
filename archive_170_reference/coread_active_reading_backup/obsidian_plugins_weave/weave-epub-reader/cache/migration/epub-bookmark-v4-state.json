@@ -1,0 +1,27 @@
+{
+  "v4MigrationCompletedAt": 1788671678154,
+  "lastBackupId": "v4-1788671678005",
+  "backups": [
+    {
+      "id": "v4-1788671678005",
+      "createdAt": 1788671678051,
+      "fileCount": 3,
+      "bookmarkFolder": "Weave EPUB Reader",
+      "label": "2026-09-06 13:14 · 3 个文件"
+    },
+    {
+      "id": "v4-1788544864784",
+      "createdAt": 1788544864865,
+      "fileCount": 1,
+      "bookmarkFolder": "Weave EPUB Reader",
+      "label": "2026-09-05 02:01 · 1 个文件"
+    },
+    {
+      "id": "v4-1788461085145",
+      "createdAt": 1788461085151,
+      "fileCount": 4,
+      "bookmarkFolder": "Weave EPUB Reader",
+      "label": "2026-09-04 02:44 · 4 个文件"
+    }
+  ]
+}

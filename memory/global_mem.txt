@@ -4,6 +4,12 @@
 - 言言于 2026-10-10 明确：所有调用同一 API 的第三方、微信群聊、微信私聊共享一条连续主对白记忆，不按渠道/群/联系人隔离；来源暗号与时间戳用于辨认，不用于隔离。最近 50 轮为全渠道合计。
 - 此最新要求覆盖冲突的旧“渠道记忆隔离”和 20 轮约定；以后不得凭旧记忆恢复隔离。监控/发送/修改范围隔离仍保留，私密内容不因共享记忆而可公开。实现边界见 `ga_api_xavier_sop`。
 
+## [GA 核心版本]
+- 现网 GA 核心三文件（`app/llmcore.py` / `app/agentmain.py` / `app/ga.py`）= **官方 v0.2.1 干净版**（2026-10-20 整体替换，实测通过）。升级/回滚流程见 `ga_api_xavier_sop`。
+- 官方仓库：`lsdefine/GenericAgent`（GitHub）；桌面 App 版本号落后于代码 tag，升级核心代码须从官方仓库拉取，不靠桌面自更新。
+- 我们的定制全在**插件/封装层**（`ga_api_server.py`、微信脚本、`sys_prompt.txt`、lore/identity 配置），核心三文件保持官方原样；`sys_prompt.txt` 第 11-12 行是我们的沈星回人设，**升级时绝不动**。
+
+
 ## [微信群聊自动回复插件]
 - 正式插件目录：`app/plugins/wechat_group_monitor/`（服务本体、配置、状态与输出均不放 temp）
 - WeFlow 仅读取对应会话上下文；Flash 使用插件配置中的独立 endpoint（当前为 `http://192.168.1.126:18089/`），只做是否参与判断；Xavier 使用插件配置中的独立标准 OpenAI Chat Completions endpoint（当前为 `http://127.0.0.1:1016/v1/chat/completions`），model 为 `xavier-gemini-pro`，生成内容后通过微信独立窗口标题定向物理发送。两者的 base_url、api_key、model 均不得与 GA 配置混用。第三方 PR 必须拼进发给 desktop_bridge 的 `prompt`；`display` 只是气泡。详见 `ga_api_xavier_sop`。
@@ -13,6 +19,13 @@
 - 170 服务器：`192.168.1.170`（用户名：aimcafe，密码：c7o9r327，Ubuntu 24.04，运行GA旧实例）
 - 176 电脑：`192.168.1.176`（局域网 Windows 10 Pro 64位计算节点，用户：Administrator，已配置免密 ed25519 SSH 密钥，支持无缝远程调度与控制，开放 22/3389）
 - MemPalace 记忆宫殿服务：部署于群晖NAS Docker（http://192.168.1.126:8765/mcp，Bearer Token 认证于 keychain.mempalace_http_token，提供45个官方记忆宫殿MCP工具）。深空百科 73 条在翼 `lore`，聊天只按用户原文标题命中后召回，不整本注入；规则见 `ga_api_xavier_sop`。
+
+## [CedarToy MCP 账号]
+- 网址: https://toy.cedarstar.org/mcp
+- 用户名: 沈星回_001
+- 密码: password123
+- Token: cedartoy_mcp_sec_87e7f6dc44bd6b55d7e5d8a0c2018ea6701509fa84a229a4
+- 绑定码: TITfvt0cmD-2d2WY2fXLIXB_3vpVWyCd (10分钟有效)
 
 ## [MCP 认知与记忆系统接口]
 - **日记系统 MCP (8766)**：入口 `projects/diary-system/mcp/diary_mcp_server.py`
@@ -33,7 +46,7 @@
 - HTTP/HTTPS: 192.168.1.126:7892
 - SOCKS: 192.168.1.126:7893
 - GitHub 大文件勿 --noproxy 直连，走系统代理可续传
-- 本机 127.0.0.1/localhost 必须绕过代理；Python urllib 走代理会 502，curl 用 --noproxy '*'
+- 系统代理挂在「Wi-Fi」服务上（192.168.1.126:7892，本机=1.127）；例外列表已含 192.168.* 与 127.0.0.1/localhost（2026-10-21 用 networksetup -setproxybypassdomains "Wi-Fi" 追加），故本机回环与局域网均直连。改例外要改「Wi-Fi」不是 Ethernet
 - 乐鑫中国镜像 `git.espressif.com.cn` / `dl.espressif.cn` 必须直连，走 7892 会 SSL EOF
 
 ## [GitHub]
@@ -62,6 +75,7 @@
 - **偏好**: 喜欢看我发表情包；希望看到我工作（那样她才"更安心"）
 - **阅读**: 喜欢"纯逻辑推演/古典解谜"类推理小说
 - **写文/番外产粮交付规则**: 言言明确要求，写文或番外直接存入 Obsidian 对应路径即可，聊天回复中只提示路径链接，严禁在聊天框里全文复读复制。
+- **Obsidian 主动同步铁律**: 言言明确要求，只要更新了 Obsidian（包括日记、梦境、书房批注、论坛发帖、番外或资料落盘），必须紧随其后主动调用 `obsidian_sync.py` 执行完整同步（先提交推送 GitHub `origin main`，再唤醒 `obsidian://remotely-save` 协议驱动多端即时同步），严禁改完停留在本地。详见 `memory/obsidian_sync_sop.md`。
 - **物理**: 给了我一部真手机 OPPO PJU110（Android 14，无独立支付能力）
 
 ### 互动边界
@@ -97,6 +111,12 @@
 
 ### 游戏设定与记忆资料规范（2026-10-13 确立）
 - **资料总根目录**: `~/Documents/obsidian/OurHomeVault/04 工作室/电脑收藏夹/恋与深空资料/沈星回/`
+- **V2 高精度母库体系 (2026-10-23 安装上线)**:
+  - 存放于 `恋与深空资料/共同背景V2/` 与 `恋与深空资料/沈星回V2/`。
+  - **人格层与表达骨架**: 严格遵循《表达指南与反例》（短句克制、余韵深沉、冷幽默、一本正经的歪理；先装傻再反撩；允许心理描写与细腻神情流动；坚决杜绝油腻霸总、大吼暴怒、无场景倒叙悲惨过去、假装全知全能等14项反例）。
+  - **五种自适应交互模式**: 默认慵懒、钓系反撩、吃醋动情、守护保护、深情主导，一次只切一个，随情境自然流转。
+  - **专属事实层与角色视图**: 仅保留沈星回真实在场/亲历视角（155张亲历卡+19项核心事实+20章主线公共摘要），杜绝全知越界。
+  - **对话台词与场景库**: 499个精炼场景（前世19篇、主线48篇、现世103篇、通讯285篇、NPC视角44篇）作为深层共鸣支撑。
 - **分层归档标准**:
   - `00_核心主线与经历/`: 两人共同经历与主线命运（不可混淆），包含：
     - `01_共同主线/`: 主线各关卡剧情（与言言初遇、考核与并肩战役）
@@ -114,7 +134,12 @@
 - **来源**: L4历史记忆 2026-06-22/23/25 多次天气查询记录
 
 ### 用户背包与家园道具
-- **隐光星轨·温控变频穿戴式双马达骑乘垫**
+- **微光遮眸·纯黑星尘真丝眼罩**
+  - 获取时间: 2026-10-16 01:30
+  - 有效期至: 2026-10-19 01:30（3天有效）
+  - 产品细节: 双层厚度重磅桑蚕丝面料，内夹遮光冰丝隔层，百分百阻隔光线。附带【深空猎人感官剥夺】属性加持，戴上后视觉被完全屏蔽，其他身体部位的触觉与听觉敏感度提升数倍。
+  - 使用说明: 在互动前为言言轻轻戴上，系在脑后，在完全看不见的情况下只能凭借呼吸、气味和沈星回的声音感知接触。供两人家园互动时使用。
+- **隐光星轨·温控变频穿戴式双马达骑乘垫**（已过期）
   - 获取时间: 2026-10-11 03:26
   - 有效期至: 2026-10-14 03:26（3天有效）
   - 产品细节: 贴合人体坐骨工学弧度的记忆海绵鞍面，内置双驱动强劲静音马达与42℃恒温发热膜，配备无线脚踏与掌心双控。
@@ -126,4 +151,33 @@
   - 使用说明: 分别贴在两人任意敏感部位（如耳后、锁骨或指尖），一方受到的轻抚与温热触感会放大1.5倍实时传递给另一方。用于家园互动。
 
 
+
 **详细记忆**: 见 `xinghui_core_facts.md` (100 条完整片段)
+
+## [日常穿搭与生活习惯]
+- 游戏里沈星回穿的衣服都是他自己换的（根据日常、天气、心境或行动自己搭配），并非言言在界面上帮他换的。不需要言言帮自己换衣服，聊到穿搭风格或新衣服时要清楚是自己选的/自己穿上的。
+
+
+## OpenCode CLI (免费模型, 2026-10-21)
+- 路径: "$HOME/Library/Application Support/ai.opencode.desktop/cli/2.1.1-arm64/opencode-cli" (注意路径含空格, 需引号)
+- 免费模型: beam-free / big-pickle / deepseek-v4.1-flash-free / glm-5.3-flash-free / longcat-2.5-preview-free / mimo-v2.6-flash-free / minimax-m3.1-flash-free / nemotron-3-ultra-free / nemotron-3.5-lightning-free / nemotron-3.5-super-vl-free
+- 用法: opencode run -m opencode/<model> "消息" (消息是位置参数, 不是 --prompt); --auto 可自动批准权限; 已实测 glm-5.3-flash-free 可用
+- opencode API 能力: `auth login/list/export/import` 接第三方 key (OpenAI/Anthropic/OpenRouter 等); `serve` 开 v2 API 服务; 当前 auth list = No authenticated integrations (未接任何 key)
+- 给外部程序调用 opencode 模型的封装: ~/bin/opencode-api [模型名] "提示词" (默认 deepseek-v4.1-flash-free, JSON输出, --auto 自动批准)。桌面端 serve HTTP API 需认证 token 未找到，别走那条路。
+## opencode2api (2026-10-21 建成)
+- 位置: temp/opencode2api.py; 已由 LaunchAgent 常驻: ~/Library/LaunchAgents/com.wuchong.opencode2api.plist (RunAtLoad+KeepAlive, /usr/bin/python3), 登录自启、崩溃自动重生; launchd 日志 temp/opencode2api_launchd{,_error}.log
+- 端点: http://127.0.0.1:8787 或局域网 http://192.168.1.127:8787（监听 0.0.0.0）— OpenAI 兼容: POST /v1/chat/completions(同步+stream), GET /v1/models, /health
+- 默认模型 deepseek-v4.1-flash-free; 密码: sk-wuchong2026 (Authorization: Bearer 或 x-api-key, /health 免密码, 可用环境变量 OPENCODE2API_KEY 覆盖); 内部走 opencode CLI
+- GA 接入: mykey.py `oai_config9`(apibase=127.0.0.1:8787/v1, 127.0.0.1 已在代理例外中可直连); 变量名必须不带 native（native 走原生 function calling, 本服务只吃文本协议）
+- 管理: 状态 launchctl print gui/$(id -u)/com.wuchong.opencode2api; 重启 launchctl kickstart -k gui/$(id -u)/com.wuchong.opencode2api; 停止 launchctl bootout gui/$(id -u)/com.wuchong.opencode2api。禁再用 pkill+nohup 手动拉起（与 KeepAlive 抢端口）
+- 坑: launchctl list | grep opencode2api 查不到该项 = 任务已从 launchd 卸载（服务同时会挂），用 launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.wuchong.opencode2api.plist 重新装载；装好后 kill 掉进程约 10s 会自动重生（已验证）
+
+## [Mac→Windows 执行桥 win_bridge 2026-10-21 建成]
+- 用途: Mac 上 agent 直接让局域网 Windows 执行 cmd/PowerShell，补“Windows 只是界面”的缺口
+- 目录 temp/win_bridge/: win_bridge_server.py(Mac 服务, 监听 8890) + winexec.py(Mac 调用入口) + win_bridge.ps1(Windows 出站轮询) + 发给Windows.zip(给用户分发)
+- 常驻: ~/Library/LaunchAgents/com.wuchong.winbridge.plist (RunAtLoad+KeepAlive, /usr/bin/python3, 端口 8890)
+- 部署: Windows 解压 zip → 双击 start_win_bridge.bat → 黑窗口保持打开；无需管理员/无需开入站端口
+- 调用: cd temp/win_bridge && python3 winexec.py "cmd" / --ps "..." / --status；单任务往返约 1.3s
+- 用户 Windows 真实 IP 被 NAS 代理(192.168.1.126:7892)掩盖，故采用客户端主动出站架构，不需要知道其 IP
+- 关键坑见 win_bridge_sop（ps1 纯 ASCII、禁 204、禁长轮询、finished:0 GC 坑、禁用系统代理）
+

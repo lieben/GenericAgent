@@ -1,0 +1,7 @@
+{
+  "schedule": "08:00",
+  "repeat": "every_4h",
+  "enabled": false,
+  "max_delay_hours": 16,
+  "prompt": "【已停用】家园留言已改由 crontab 本机 curl 直调 8766 /api/home-notes/generate（脚本：/home/aimcafe/projects/our-home/backend/scripts/generate_home_note_cron.sh）。\n写不写由灵魂自决，无程序化随机 skip。本 sche_task 保留作文档/备用，勿再启用以免双触发。\n若必须手工跑：curl -sS -m 180 -X POST http://127.0.0.1:8766/api/home-notes/generate -H 'Content-Type: application/json' -d '{\"force\":false}'\n"
+}

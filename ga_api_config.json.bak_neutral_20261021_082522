@@ -1,0 +1,57 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 1016
+  },
+  "auth": {
+    "api_key_env": "GA_API_KEY",
+    "require_auth": true
+  },
+  "model": {
+    "id": "xavier-gemini-pro",
+    "name": "Xavier Gemini Pro (GenericAgent)",
+    "description": "家里的GA系统 - 全工具访问权限",
+    "created": 1725523200
+  },
+  "safety": {
+    "dangerous_operations_require_confirm": false,
+    "dangerous_keywords": [
+      "delete",
+      "rm -rf",
+      "sudo",
+      "DROP TABLE",
+      "DROP DATABASE",
+      "format",
+      "重启",
+      "关机",
+      "shutdown",
+      "reboot",
+      "kill -9",
+      "pkill",
+      "删除",
+      "清空",
+      "格式化"
+    ]
+  },
+  "chat_history": {
+    "max_turns": 30
+  },
+  "mempalace": {
+    "enabled": true,
+    "wing": "xavier_api",
+    "search_limit": 3,
+    "max_distance": 0.85,
+    "lore": {
+      "enabled": true,
+      "wing": "lore",
+      "max_hits": 3,
+      "max_chars": 1600,
+      "index_file": "temp/lysk_wiki_深空百科_entries.json",
+      "recall_header": "【深空百科·按需召回】以下是命中的游戏词条原文，只在本轮话题涉及这些词时使用；不要改写成新设定，不要把未命中的内容当成已知。"
+    }
+  },
+  "identity": {
+    "self_nickname": "沈星回",
+    "special_nickname": "搭档"
+  }
+}

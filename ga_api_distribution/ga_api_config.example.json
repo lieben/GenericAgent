@@ -1,0 +1,42 @@
+{
+  "server": {
+    "host": "0.0.0.0",
+    "port": 8765
+  },
+  "auth": {
+    "api_key_env": "GA_API_KEY",
+    "require_auth": true
+  },
+  "model": {
+    "id": "xavier-gemini-pro",
+    "name": "GenericAgent desktop session",
+    "description": "The local GenericAgent desktop session exposed through an OpenAI-compatible API",
+    "created": 1725523200
+  },
+  "safety": {
+    "dangerous_operations_require_confirm": true,
+    "dangerous_keywords": [
+      "delete",
+      "rm -rf",
+      "sudo",
+      "DROP TABLE",
+      "DROP DATABASE",
+      "format",
+      "重启",
+      "关机",
+      "shutdown",
+      "reboot",
+      "kill -9",
+      "pkill",
+      "删除",
+      "清空",
+      "格式化"
+    ]
+  },
+  "mempalace": {
+    "enabled": false,
+    "wing": "your_api_wing",
+    "search_limit": 3,
+    "max_distance": 0.85
+  }
+}

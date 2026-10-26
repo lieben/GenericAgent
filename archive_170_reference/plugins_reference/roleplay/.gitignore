@@ -1,0 +1,4 @@
+# Runtime session data is local and must never enter source control.
+runtime/
+__pycache__/
+*.py[cod]
