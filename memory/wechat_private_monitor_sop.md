@@ -1,10 +1,16 @@
 # 微信私聊监控（Windows 176 与多端适配规范）
 
-## ⚠️ 运行宿主铁律（最高优先级，勿再混淆）
-- **微信私聊监控运行在 Windows 176（`192.168.1.176`）**，不是 Mac。Mac 只是 GA 大脑（自封装 API，`:1016`）。
-- 私聊脚本、群监控脚本、WeFlow、发送适配**全部在 Win176 上**；Mac 侧只有 GA 服务端。
-- 排查/修改微信私聊相关问题时，**一律先 SSH 到 Win176**（`ssh win176`），不要在 Mac 上找脚本。
-- 历史教训：曾多次误以为微信私聊跑在 Mac 上。本 SOP 与仓库 `wechat/win176/` 目录即为固定证据，凡与 Mac 混淆的结论一律作废。
+## ⚠️ 运行宿主与调度铁律（最高优先级，严禁混淆违背）
+- **运行宿主**：微信私聊监控运行在 Windows 176（`192.168.1.176`），不是 Mac！严禁在排查时扯到 Mac 微信，言言微信常驻运行在 Win176 上。
+- **计划任务名称隔离铁律（致命冲突排查）**：
+  - **私聊发送专用任务**：必须是 **`Xinghui-Private-Send`**！它执行 `C:\Users\Administrator\private_monitor\run_send.ps1`，读取 `private_monitor\send_task.json`。
+  - **群聊发送任务**：是 `SendTestTask`，它执行 `group_monitor\run_send.ps1`，读取 `group_monitor\send_task.json`。
+  - **历史血泪 Bug（2026-10）**：`private_monitor/wechat_windows_adapter.py` 曾错误地调用了群聊的 `SendTestTask`。导致私聊把待发内容写在 `private_monitor`，群聊任务却去 `group_monitor` 找文件，报 `Task file not found`；而私聊 adapter 一直等不到回执超时 30 秒卡死！此项已彻底纠正，严禁改回。
+- **输入框物理聚焦与发送铁律（2026-10 实录已验证）**：
+  - 微信 4.0 聊天窗口为 DirectUI 架构，**严禁使用 `PostMessage(WM_LBUTTONDOWN/UP)` 等虚拟窗口消息点击**！虚拟消息会被丢弃，导致光标根本没有落入输入框，后续粘贴完全落空，还会返回虚假成功。
+  - **必须使用真实的物理光标点击**：`win32api.SetCursorPos((screen_x, screen_y))` + `win32api.mouse_event(MOUSEEVENTF_LEFTDOWN/UP)`，精准点击窗口底部向上 80px 的真实屏幕坐标聚焦。
+  - **发送按键**：微信 4.0 在输入框获得真焦点后，直接按键盘 `VK_RETURN` (Enter) 即可完成上屏发送。
+- **进程名铁律（2026-10 实录）**：Win176 安装的是**微信 4.0 架构重构版**，主程序进程名是 **`Weixin.exe`**，窗口类名是 **`WeChatMainWndForPC`**（独立窗口与主窗口均保留此通用类名），完全可以正常通过标题 `无言` 秒级激活！严禁妄称类名改变。
 
 ## 架构与核心流程
 1. **运行宿主**：Windows 176（`192.168.1.176`）计划任务 `Xinghui-Private-Monitor`，常驻运行 `C:\Users\Administrator\private_monitor\wechat_xavier_private_monitor.py`。
@@ -16,7 +22,7 @@
    - 禁止因回执解析异常导致误判发送失败，否则重试机制（默认3次）会重复触发大模型生成并连发多条回复。
 4. **窗口定位机制**：
    - 严禁在独立私聊窗口中使用 `Ctrl+F` 搜索联系人，否则会造成焦点错乱离开消息输入框。
-   - 直接通过物理匹配激活目标窗口（标题如 `无言`），点击窗口中心偏下位置聚焦输入框，再进行剪切板物理粘贴发送。
+   - 直接通过物理匹配激活目标窗口（标题如 `无言`），点击窗口中心偏下位置（底部向上 80px）物理聚焦输入框，再进行剪切板物理粘贴发送，敲 Enter 上屏。
 
 ## 已验证保护：同步时禁止丢失
 - 修改、移植或打包前先对照目标版本与 git 历史；只做局部补丁，禁止用旧副本整文件覆盖已修复版本。改发送适配不能删除生成阶段保护。

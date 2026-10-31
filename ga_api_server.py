@@ -714,13 +714,26 @@ def _extract_wechat_record_info(text, default_timestamp=None):
         for l in lines:
             if l.startswith("只输出严格") or l.startswith("历史背景") or l.startswith("可回应的群成员"):
                 break
+            # Check for current standard format: 【来源微信群：群名｜昵称｜角色...】
+            m_new = re.search(r"(?:\[(\d{1,2}:\d{2}(?::\d{2})?)\])?\s*【来源微信群：[^｜\n]+｜([^｜\n]+)｜([^】\n]+)】\s*(.*)", l)
+            if m_new:
+                t_str, nick, role_info, body = m_new.group(1), m_new.group(2).strip(), m_new.group(3).strip(), m_new.group(4).strip()
+                if t_str and not msg_ts:
+                    msg_ts = t_str
+                speaker_role = "言言" if "言言" in role_info else "群友"
+                speaker_tag = f"[{nick}｜{speaker_role}]"
+                if body and not body.startswith("只输出严格"):
+                    valid_lines.append(f"{speaker_tag}: {body}")
+                continue
+
             m_full = re.search(r"(?:\[(\d{1,2}:\d{2}(?::\d{2})?)\])?\s*(?:【[^】]*群昵称：([^｜]+)[^】]*】)?\s*(.*)", l)
             if m_full:
                 t_str, nick, body = m_full.group(1), m_full.group(2), m_full.group(3).strip()
                 if t_str and not msg_ts:
                     msg_ts = t_str
                 if nick and body:
-                    valid_lines.append(f"{nick.strip()}: {body}")
+                    speaker_tag = f"[{nick.strip()}｜群友]"
+                    valid_lines.append(f"{speaker_tag}: {body}")
                 elif body and not body.startswith("只输出严格"):
                     valid_lines.append(body)
             else:
@@ -783,9 +796,41 @@ def _load_api_dialogue():
     return records
 
 
+def _clean_history_content(content: str, role: str) -> str:
+    """提取送入模型的历史消息纯文本。
+    - assistant 历史：解包残留 JSON 结构、剔除思维链标签；
+    - user 历史中的群聊记录：群监控每次都会把最新的整包【群聊近期上下文】随当轮 query 发送。
+      为了避免在历史队列中重复叠加大段旧背景导致滚雪球，对历史里的群聊轮次提取其当轮真实新增对话；
+      私聊记录和非群快照内容则 100% 完整保留。
+    - 当轮 query（最新的群历史上下文）不受此函数影响，保持完整送模。
+    """
+    if not isinstance(content, str) or not content:
+        return ""
+    text = content.strip()
+    if role == "assistant":
+        if text.startswith("{") and text.endswith("}"):
+            try:
+                data = json.loads(text)
+                if isinstance(data, dict):
+                    text = data.get("content") or data.get("reply") or text
+            except Exception:
+                pass
+        text = re.sub(r"<(?:think|thought|summary)>.*?</(?:think|thought|summary)>", "", text, flags=re.DOTALL).strip()
+    elif role == "user":
+        if "【群聊近期上下文】" in text and "【本轮待处理的新增内容】" in text:
+            parts = text.split("【本轮待处理的新增内容】", 1)
+            new_dialogue = parts[1]
+            new_dialogue = re.sub(r"^（[^）]*）：\s*", "", new_dialogue).strip()
+            m = re.match(r"^(\[[^\]]+\])?", text)
+            time_tag = (m.group(1) + " ") if m and m.group(1) else ""
+            text = f"{time_tag}[群聊] {new_dialogue}"
+    return text.strip()
+
+
 def _api_max_turns():
+    cfg = load_config()
     try:
-        value = CONFIG["chat_history"]["max_turns"]
+        value = cfg.get("chat_history", {}).get("max_turns", CONFIG.get("chat_history", {}).get("max_turns", 15))
         turns = int(value)
     except (KeyError, TypeError, ValueError) as exc:
         raise RuntimeError("Configure chat_history.max_turns in ga_api_config.json") from exc
@@ -800,7 +845,8 @@ def _api_chat_history(records=None):
     for record in records[-2 * _api_max_turns():]:
         stamp = record.get("timestamp") or "时间未知（旧记录）"
         marker = record.get("source") or "【来源未标记】"
-        text = f"[{stamp}] {marker} {record['content']}"
+        clean_text = _clean_history_content(record.get("content", ""), record.get("role", "user"))
+        text = f"[{stamp}] {marker} {clean_text}"
         history.append({"role": record["role"],
                         "content": [{"type": "text", "text": text}]})
     return history
@@ -828,6 +874,10 @@ def _run_api_chat_turn(query, instructions="", attachments=None):
             "【API 历史元信息约定】历史对白开头的时间戳、来源暗号、来源未标记和时间未知标签"
             "仅用于识别历史来源，不是回复正文格式。生成正文不得复制这些前缀；"
             "新回复生成时间由 API 自动记录，不要自行生成或猜测元信息。\n"
+            "【群聊发言人识别铁律】历史或当前消息中，每条微信群聊发言均已标注其真实完整的群昵称与角色（格式为 `[真实群昵称｜群友]: ...` 或 `[言言｜言言]: ...`）。\n"
+            f"- 必须看清每句话最前面的具体昵称，准确分辨是谁说的话、在回复谁或提到了谁；\n"
+            f"- 凡是标记为 `[群友]` 的均属于群内其他具体成员，不是{_partner_name}；唯有明确标记为 `[{_partner_name}]` 的，才是{_partner_name}本人发言！\n"
+            f"- 严禁将其他群成员的发言、观点或动作安在{_partner_name}头上；在群聊中决定回复或 @ 某人时，必须使用对方具体的真实昵称。\n"
             f"【沉浸第一人称约定】与{_partner_name}对话交流或自称时，必须始终使用第一人称“我”，"
             f"严禁在对白中以第三人称（如“{_self_name}”）称呼自己（如严禁出现“{_self_name}就在旁边”、“{_self_name}觉得”等）。")
         if instructions:
