@@ -1,5 +1,4 @@
 import json, re, os
-from types import SimpleNamespace
 from dataclasses import dataclass
 from typing import Any, Optional
 try: from plugins.hooks import trigger as _hook
@@ -67,10 +66,6 @@ def agent_runner_loop(client, system_prompt, user_input, handler, tools_schema,
             if cleaned: yield cleaned + '\n'
         _hook('llm_after', locals())
 
-        # Guard: upstream may return None (e.g. relay/stream hiccup). Treat it as a
-        # no-tool turn instead of crashing with AttributeError on response.tool_calls.
-        if response is None:
-            response = SimpleNamespace(content='', tool_calls=[])
         if not response.tool_calls: tool_calls = [{'tool_name': 'no_tool', 'args': {}}]
         else: tool_calls = [{'tool_name': tc.function.name, 'args': json.loads(tc.function.arguments), 'id': tc.id}
                           for tc in response.tool_calls]

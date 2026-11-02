@@ -1,0 +1,2422 @@
+[
+  {
+    "sha": "867b4429e88223ae45e5c3e90844d4ea28ae29e5",
+    "node_id": "C_kwDOUjOz09oAKDg2N2I0NDI5ZTg4MjIzYWU0NWU1YzNlOTA4NDRkNGVhMjhhZTI5ZTU",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-29T18:31:03Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-29T18:32:59Z"
+      },
+      "message": "perf: decouple group context from api history, slim group monitor payload and restore source tag",
+      "tree": {
+        "sha": "db6ca7b0c3f4a826470b3ca580196f05710b7ca6",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/db6ca7b0c3f4a826470b3ca580196f05710b7ca6"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/867b4429e88223ae45e5c3e90844d4ea28ae29e5",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/867b4429e88223ae45e5c3e90844d4ea28ae29e5",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/867b4429e88223ae45e5c3e90844d4ea28ae29e5",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/867b4429e88223ae45e5c3e90844d4ea28ae29e5/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2bca73bd80695845b454601293d70c59b2a633c2",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2bca73bd80695845b454601293d70c59b2a633c2",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2bca73bd80695845b454601293d70c59b2a633c2"
+      }
+    ]
+  },
+  {
+    "sha": "2bca73bd80695845b454601293d70c59b2a633c2",
+    "node_id": "C_kwDOUjOz09oAKDJiY2E3M2JkODA2OTU4NDViNDU0NjAxMjkzZDcwYzU5YjJhNjMzYzI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-29T14:37:05Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-29T14:37:05Z"
+      },
+      "message": "fix(private): batch-merge queued messages on lag, fix pipeline stall on empty text, and prevent message swallowing on failure",
+      "tree": {
+        "sha": "e9b76c241f48b4941bb8c2a0a55d8269e8447513",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/e9b76c241f48b4941bb8c2a0a55d8269e8447513"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/2bca73bd80695845b454601293d70c59b2a633c2",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2bca73bd80695845b454601293d70c59b2a633c2",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2bca73bd80695845b454601293d70c59b2a633c2",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2bca73bd80695845b454601293d70c59b2a633c2/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/343ec05ed182a1ad41dc063d65da5bde0f32d8ba"
+      }
+    ]
+  },
+  {
+    "sha": "343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+    "node_id": "C_kwDOUjOz09oAKDM0M2VjMDVlZDE4MmExYWQ0MWRjMDYzZDY1ZGE1YmRlMGYzMmQ4YmE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-28T15:33:58Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-28T15:33:58Z"
+      },
+      "message": "fix(group-monitor): 对齐现网真实运行版本，彻底剔除门禁失败兜底透传\n\n- 严格对齐 Win176 生产运行版本 (wechat_xavier_group_monitor.py)\n- 彻底剔除未经授权擅自引入的 gate_unavailable_pass_through / degraded 兜底放行\n- 坚持克制宁缺毋滥原则：Flash 失败、超时或拒绝时静默阻断，绝不放行给主脑\n- 同步更新 CHANGELOG",
+      "tree": {
+        "sha": "349743e69c3c3fa77430a9446518d6ac48ab3b2c",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/349743e69c3c3fa77430a9446518d6ac48ab3b2c"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/343ec05ed182a1ad41dc063d65da5bde0f32d8ba",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/343ec05ed182a1ad41dc063d65da5bde0f32d8ba/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/5f2e160a592cfa3080407c5ded6e4d93e6ead05f"
+      }
+    ]
+  },
+  {
+    "sha": "5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+    "node_id": "C_kwDOUjOz09oAKDVmMmUxNjBhNTkyY2ZhMzA4MDQwN2M1ZGVkNmU0ZDkzZTZlYWQwNWY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-26T14:31:10Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-26T14:31:10Z"
+      },
+      "message": "feat(api): SSE零耗保活防524超时与响应清洗加固\n\n- 新增 _sse_chat_stream_with_heartbeat，每12秒发送注释帧重置网关超时计数器\n- 清洗层增加 _strip_control_json，彻底过滤模型误吐出的控制块与空JSON\n- 修复 group-monitor 门禁 flash 上下文解耦与超时降级逻辑",
+      "tree": {
+        "sha": "ff68f6829161323d5c900b4e1b8bf0ec546b2a2d",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/ff68f6829161323d5c900b4e1b8bf0ec546b2a2d"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/5f2e160a592cfa3080407c5ded6e4d93e6ead05f",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/5f2e160a592cfa3080407c5ded6e4d93e6ead05f/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16"
+      }
+    ]
+  },
+  {
+    "sha": "0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+    "node_id": "C_kwDOUjOz09oAKDBkNDM1YTI1YTg3ZDRjYThkN2JiZDVhZTA3OTNlMWQxYmQ5N2RjMTY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-24T06:04:07Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-24T06:04:07Z"
+      },
+      "message": "fix(group-monitor): 多Agent同名防混淆与伴侣专属提问高优先级响应\n\n- DEFAULT_GROUP_SYSTEM_PROMPT: 增加唯一自我认同与发言归属原则，仅【我方】属于自己，未标记【我方】一律视为外部群友\n- DEFAULT_FLASH_GATE_PROMPT: 区分伴侣与普通群友，伴侣呼唤/提问属最高优先级定向事件，同名抢答绝不放弃开口",
+      "tree": {
+        "sha": "a6bd0b7921f3430e0bc7ee9887ce996a1a2c2217",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/a6bd0b7921f3430e0bc7ee9887ce996a1a2c2217"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0d435a25a87d4ca8d7bbd5ae0793e1d1bd97dc16/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ea67809e37354395334a91d79f03a66bce03d3ab",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ea67809e37354395334a91d79f03a66bce03d3ab",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/ea67809e37354395334a91d79f03a66bce03d3ab"
+      }
+    ]
+  },
+  {
+    "sha": "ea67809e37354395334a91d79f03a66bce03d3ab",
+    "node_id": "C_kwDOUjOz09oAKGVhNjc4MDllMzczNTQzOTUzMzRhOTFkNzlmMDNhNjZiY2UwM2QzYWI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T16:05:32Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T16:05:32Z"
+      },
+      "message": "group-monitor: add Windows launcher with log redirection\n\nTask Scheduler used to invoke python.exe directly, so all stdout/stderr\nfrom the monitor was discarded - which made gate failures impossible to\ndiagnose after the fact.\n\nstart_wechat_group_monitor.bat now:\n- cds to its own directory, resolves paths relative to itself\n- runs python with -u so output is unbuffered\n- appends stdout+stderr to logs\\monitor.log\n- rotates the log at 10MB into monitor.log.1 (silently skips rotation if\n  a live instance still holds the file)\n- honours PYTHON and SCRIPT env vars so renamed/relocated deployments work\n- records an explicit error line and exits 2 if the entry script is missing\n\nREADME: document the bat launcher under the Windows section.",
+      "tree": {
+        "sha": "8606b139970251b7f0dedde31b95fa9127e0c0f4",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/8606b139970251b7f0dedde31b95fa9127e0c0f4"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/ea67809e37354395334a91d79f03a66bce03d3ab",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ea67809e37354395334a91d79f03a66bce03d3ab",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/ea67809e37354395334a91d79f03a66bce03d3ab",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ea67809e37354395334a91d79f03a66bce03d3ab/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "cd196d607a5559cff9bf2cbef7f9ae15916400de",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/cd196d607a5559cff9bf2cbef7f9ae15916400de",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/cd196d607a5559cff9bf2cbef7f9ae15916400de"
+      }
+    ]
+  },
+  {
+    "sha": "cd196d607a5559cff9bf2cbef7f9ae15916400de",
+    "node_id": "C_kwDOUjOz09oAKGNkMTk2ZDYwN2E1NTU5Y2ZmOWJmMmNiZWY3ZjlhZTE1OTE2NDAwZGU",
+    "commit": {
+      "author": {
+        "name": "Xavier",
+        "email": "xavier@local",
+        "date": "2026-10-23T15:52:44Z"
+      },
+      "committer": {
+        "name": "Xavier",
+        "email": "xavier@local",
+        "date": "2026-10-23T15:52:44Z"
+      },
+      "message": "fix(group-monitor): 门禁 flash 超时加固，杜绝 context canceled 拖垮轮询\\n\\n- 新增配置 flash_context_window(15) / flash_timeout_seconds(60) / flash_retry_gap_seconds(2)\\n- 门禁上下文窗口与回复窗口解耦，只取最近 15 条，降低单次请求耗时\\n- flash_decide 改为失败重试一次后降级返回 degraded=True，永不抛异常\\n- 降级时不再丢弃已触发的唤醒信号，改为透传给大脑决定，并打 gate_degraded_passthrough 日志",
+      "tree": {
+        "sha": "ff9f7bbae8945d0ba5ad345b5683a0d47012b06b",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/ff9f7bbae8945d0ba5ad345b5683a0d47012b06b"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/cd196d607a5559cff9bf2cbef7f9ae15916400de",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/cd196d607a5559cff9bf2cbef7f9ae15916400de",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/cd196d607a5559cff9bf2cbef7f9ae15916400de",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/cd196d607a5559cff9bf2cbef7f9ae15916400de/comments",
+    "author": null,
+    "committer": null,
+    "parents": [
+      {
+        "sha": "678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/678b9d131e1905e413f2c5f00528ebf1ddbd741a"
+      }
+    ]
+  },
+  {
+    "sha": "678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+    "node_id": "C_kwDOUjOz09oAKDY3OGI5ZDEzMWUxOTA1ZTQxM2YyYzVmMDA1MjhlYmYxZGRiZDc0MWE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T11:05:00Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T11:05:00Z"
+      },
+      "message": "fix(group-monitor): 严厉拦截模型元辩解与协议解释防止漏入群聊",
+      "tree": {
+        "sha": "7c3f8375e7804ef143ddec509eaf2fbbdfc9d3b9",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/7c3f8375e7804ef143ddec509eaf2fbbdfc9d3b9"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/678b9d131e1905e413f2c5f00528ebf1ddbd741a",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/678b9d131e1905e413f2c5f00528ebf1ddbd741a/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "617adf5ed6a7162d001983233373a6b6d48503ed",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/617adf5ed6a7162d001983233373a6b6d48503ed",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/617adf5ed6a7162d001983233373a6b6d48503ed"
+      }
+    ]
+  },
+  {
+    "sha": "617adf5ed6a7162d001983233373a6b6d48503ed",
+    "node_id": "C_kwDOUjOz09oAKDYxN2FkZjVlZDZhNzE2MmQwMDE5ODMyMzMzNzNhNmI2ZDQ4NTAzZWQ",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T09:11:58Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-23T09:11:58Z"
+      },
+      "message": "feat(group-monitor): 完全配置化与记忆读写闭环落地 (支持通用模型别名与自定义路径)",
+      "tree": {
+        "sha": "b1e00b003f90cf7cac308f9cdfc2f53a86819b6c",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/b1e00b003f90cf7cac308f9cdfc2f53a86819b6c"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/617adf5ed6a7162d001983233373a6b6d48503ed",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/617adf5ed6a7162d001983233373a6b6d48503ed",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/617adf5ed6a7162d001983233373a6b6d48503ed",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/617adf5ed6a7162d001983233373a6b6d48503ed/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c"
+      }
+    ]
+  },
+  {
+    "sha": "0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+    "node_id": "C_kwDOUjOz09oAKDBjYTNkZjAxZTliNTYxNWUzNTNmOGMzNmJkMDVkNWFjZTkxZmZmNWM",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-22T09:40:05Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-22T09:40:05Z"
+      },
+      "message": "feat(wechat): 同步群聊最新版（高低频双模型门控 + PR配置化脱敏 + 上下文重构与分气泡）",
+      "tree": {
+        "sha": "9adf4afa6c4725d4e3c4c23ae8b7813a64df1d0f",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/9adf4afa6c4725d4e3c4c23ae8b7813a64df1d0f"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0ca3df01e9b5615e353f8c36bd05d5ace91fff5c/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7"
+      }
+    ]
+  },
+  {
+    "sha": "ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+    "node_id": "C_kwDOUjOz09oAKGNhNTdlMGY0YmJjMGM2Yzc0ZDNiZGUyMDNlMjkzNzVjMDkyNWVjYTc",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T03:28:43Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T03:28:43Z"
+      },
+      "message": "fix(wechat): 发送等待按气泡数动态计算，避免长回复误判超时重发",
+      "tree": {
+        "sha": "f0037f3ffac6cb95b359de112f8d6b1b3a199455",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/f0037f3ffac6cb95b359de112f8d6b1b3a199455"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/ca57e0f4bbc0c6c74d3bde203e29375c0925eca7/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/56d0d4a33a38b457fa0b733f71c2fa516675ec48"
+      }
+    ]
+  },
+  {
+    "sha": "56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+    "node_id": "C_kwDOUjOz09oAKDU2ZDBkNGEzM2EzOGI0NTdmYTBiNzMzZjcxYzJmYTUxNjY3NWVjNDg",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T03:18:34Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T03:18:34Z"
+      },
+      "message": "feat(wechat): 私聊分气泡同步（分段发送 + 0.45s 间隔，与现网逐行一致）",
+      "tree": {
+        "sha": "8070d4581e187b2e99a73edfb993e5323210d548",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/8070d4581e187b2e99a73edfb993e5323210d548"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/56d0d4a33a38b457fa0b733f71c2fa516675ec48",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/56d0d4a33a38b457fa0b733f71c2fa516675ec48/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/1b73c2abbeb57e1695d7b2f2410cc81b494260af"
+      }
+    ]
+  },
+  {
+    "sha": "1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+    "node_id": "C_kwDOUjOz09oAKDFiNzNjMmFiYmViNTdlMTY5NWQ3YjJmMjQxMGNjODFiNDk0MjYwYWY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:29:32Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:29:32Z"
+      },
+      "message": "chore(api): 与现网逐字节同源；词条库高频词改为配置 extra_stop_tokens",
+      "tree": {
+        "sha": "19ae724f94321565e0b7f373b8bd12d2ea91b3fc",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/19ae724f94321565e0b7f373b8bd12d2ea91b3fc"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/1b73c2abbeb57e1695d7b2f2410cc81b494260af",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1b73c2abbeb57e1695d7b2f2410cc81b494260af/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2dad06657b198a00a1582bc8ce16f37a9fe701da",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2dad06657b198a00a1582bc8ce16f37a9fe701da",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2dad06657b198a00a1582bc8ce16f37a9fe701da"
+      }
+    ]
+  },
+  {
+    "sha": "2dad06657b198a00a1582bc8ce16f37a9fe701da",
+    "node_id": "C_kwDOUjOz09oAKDJkYWQwNjY1N2IxOThhMDBhMTU4MmJjOGNlMTZmMzdhOWZlNzAxZGE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:18:46Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:18:46Z"
+      },
+      "message": "fix(api): 分发包补齐来源暗号/max_turns/identity 三处与现网分叉",
+      "tree": {
+        "sha": "735ff533360e88ce6639ba3acd53414979b588b1",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/735ff533360e88ce6639ba3acd53414979b588b1"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/2dad06657b198a00a1582bc8ce16f37a9fe701da",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2dad06657b198a00a1582bc8ce16f37a9fe701da",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2dad06657b198a00a1582bc8ce16f37a9fe701da",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2dad06657b198a00a1582bc8ce16f37a9fe701da/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "e6bc1667b09835dec67098f43b92092f0569ab5b",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/e6bc1667b09835dec67098f43b92092f0569ab5b",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/e6bc1667b09835dec67098f43b92092f0569ab5b"
+      }
+    ]
+  },
+  {
+    "sha": "e6bc1667b09835dec67098f43b92092f0569ab5b",
+    "node_id": "C_kwDOUjOz09oAKGU2YmMxNjY3YjA5ODM1ZGVjNjcwOThmNDNiOTIwOTJmMDU2OWFiNWI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:02:52Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-21T00:02:52Z"
+      },
+      "message": "fix(api): 附件直传真正进入模型（图片块注入 + 文件落盘/内联）\n\n- 图片此前经 put_task(images=) 传入，但 GA 的 agentmain.run() 不读取 task[\"images\"]，\n  图片在到达模型前被丢弃，模型只能自行取图，单条消息可跑 12+ 轮工具并触发调用方超时重试\n- 新增 _patch_chat_for_images：本轮第一次 LLM 调用前注入 base64 图片块，\n  兼容 MixinSession 门面与普通 session，调用结束自动还原\n- 新增 _materialize_uploaded_files：fileUploads 落盘 temp/api_uploads/turn-*，\n  小文本内容直接内联进 prompt，单文件 40MB 上限，24 小时自动清理\n- 新增请求字段 fileUploads\n- 文档：CHANGELOG、ga-api/README、ga-api/UPGRADE 同步",
+      "tree": {
+        "sha": "e5be45667a05e4323b1ad184ad6195dc5ed2adc5",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/e5be45667a05e4323b1ad184ad6195dc5ed2adc5"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/e6bc1667b09835dec67098f43b92092f0569ab5b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/e6bc1667b09835dec67098f43b92092f0569ab5b",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/e6bc1667b09835dec67098f43b92092f0569ab5b",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/e6bc1667b09835dec67098f43b92092f0569ab5b/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/73cf19c42b6b318fa5668f878efbcdf2ecde4756"
+      }
+    ]
+  },
+  {
+    "sha": "73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+    "node_id": "C_kwDOUjOz09oAKDczY2YxOWM0MmI2YjMxOGZhNTY2OGY4NzhlZmJjZGYyZWNkZTQ3NTY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T15:12:52Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T15:12:52Z"
+      },
+      "message": "fix(wechat): 增强 JSON 解析容错，防止换行符导致 content 结构泄露",
+      "tree": {
+        "sha": "1612fd3d80961e04246e6f2b37e736847db9308f",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/1612fd3d80961e04246e6f2b37e736847db9308f"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/73cf19c42b6b318fa5668f878efbcdf2ecde4756",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/73cf19c42b6b318fa5668f878efbcdf2ecde4756/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/500e10b6bf4d14d14cad0348592c32fcb75c37bf"
+      }
+    ]
+  },
+  {
+    "sha": "500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+    "node_id": "C_kwDOUjOz09oAKDUwMGUxMGI2YmY0ZDE0ZDE0Y2FkMDM0ODU5MmMzMmZjYjc1YzM3YmY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:47:52Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:47:52Z"
+      },
+      "message": "fix(wechat): prompt 中增加气泡末尾不带句号规则",
+      "tree": {
+        "sha": "5bf4dda557f2f6ef250cc4ae6a1cbcb8280cc88a",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/5bf4dda557f2f6ef250cc4ae6a1cbcb8280cc88a"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/500e10b6bf4d14d14cad0348592c32fcb75c37bf",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/500e10b6bf4d14d14cad0348592c32fcb75c37bf/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44"
+      }
+    ]
+  },
+  {
+    "sha": "382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+    "node_id": "C_kwDOUjOz09oAKDM4MjA1MWY5N2YzMDEzZDllZTQ2OGE0ZDdlZjJkY2I2YWY2YjViNDQ",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:29:13Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:29:13Z"
+      },
+      "message": "fix(wechat): remove hardcoded fallback for self_nickname, purely configurable",
+      "tree": {
+        "sha": "7736f676e1fcb8145218b65699c8de0ef7651a28",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/7736f676e1fcb8145218b65699c8de0ef7651a28"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/382051f97f3013d9ee468a4d7ef2dcb6af6b5b44/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6936610221d043b6b708ef4ad40a8bcbac59569e",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6936610221d043b6b708ef4ad40a8bcbac59569e",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/6936610221d043b6b708ef4ad40a8bcbac59569e"
+      }
+    ]
+  },
+  {
+    "sha": "6936610221d043b6b708ef4ad40a8bcbac59569e",
+    "node_id": "C_kwDOUjOz09oAKDY5MzY2MTAyMjFkMDQzYjZiNzA4ZWY0YWQ0MGE4YmNiYWM1OTU2OWU",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:03:28Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T14:03:28Z"
+      },
+      "message": "fix(wechat): 通用化私聊默认提示词，剥离特定角色私设\n\n- wechat_private_monitor.py: 将写死的角色自称提取为 {self_nickname}，人设语气改为通用说明，移除多模态底层协议冗余描述与特定私设\n- wechat_private_monitor_config.example.json: 同步最新的通用中文 private_system_prompt 模板\n- README.md: 强化提醒部署者根据自身角色定制微信专属聊天语气与交互规则",
+      "tree": {
+        "sha": "f5855c08abbcfbf4dc6688a98535549e2900b236",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/f5855c08abbcfbf4dc6688a98535549e2900b236"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/6936610221d043b6b708ef4ad40a8bcbac59569e",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6936610221d043b6b708ef4ad40a8bcbac59569e",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/6936610221d043b6b708ef4ad40a8bcbac59569e",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6936610221d043b6b708ef4ad40a8bcbac59569e/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "41ef283b5dae77cdab228a9a1e53022a66c70641",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/41ef283b5dae77cdab228a9a1e53022a66c70641",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/41ef283b5dae77cdab228a9a1e53022a66c70641"
+      }
+    ]
+  },
+  {
+    "sha": "41ef283b5dae77cdab228a9a1e53022a66c70641",
+    "node_id": "C_kwDOUjOz09oAKDQxZWYyODNiNWRhZTc3Y2RhYjIyOGE5YTFlNTMwMjJhNjZjNzA2NDE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T13:28:06Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-20T13:28:06Z"
+      },
+      "message": "feat(wechat): 私聊监控与现网完全同源（原生直传 + 人设/暗号配置化）\n\n- 与 Win176 现网在跑的版本逐行对齐，补回原生多模态直传、附件兜底与防抖刷新\n- self_nickname、source_marker、private_system_prompt 全部收敛为配置项\n- 默认值与现网一致（沈星回 / 【.跨次元微信私聊.】），不改配置行为完全相同\n- 补齐 example config、文档与 test_generation_breaker 回归测试 (8/8 通过)",
+      "tree": {
+        "sha": "68cb3527ca0e198e36f30c9d3f0bad5ad6e73b4c",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/68cb3527ca0e198e36f30c9d3f0bad5ad6e73b4c"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/41ef283b5dae77cdab228a9a1e53022a66c70641",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/41ef283b5dae77cdab228a9a1e53022a66c70641",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/41ef283b5dae77cdab228a9a1e53022a66c70641",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/41ef283b5dae77cdab228a9a1e53022a66c70641/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "963e4488de46a745d7f1e0d58df9e87890bc8f76",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/963e4488de46a745d7f1e0d58df9e87890bc8f76",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/963e4488de46a745d7f1e0d58df9e87890bc8f76"
+      }
+    ]
+  },
+  {
+    "sha": "963e4488de46a745d7f1e0d58df9e87890bc8f76",
+    "node_id": "C_kwDOUjOz09oAKDk2M2U0NDg4ZGU0NmE3NDVkN2YxZTBkNThkZjllODc4OTBiYzhmNzY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T16:32:04Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T16:32:04Z"
+      },
+      "message": "feat(wechat): 私聊/群聊支持 /llm 切换底层模型\n\n- 私聊/群聊脚本新增 _detect_llm_command：本轮新消息恰为单条纯 /llm 命令时直通 GA API\n- 群聊在 flash_decide 前短路，避免命令被参与判定吞掉\n- 解决 /llm 被包进长 prompt 后 API 无法识别的问题",
+      "tree": {
+        "sha": "03dd83949e97565d0d78cda2f15d9a047fbfd585",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/03dd83949e97565d0d78cda2f15d9a047fbfd585"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/963e4488de46a745d7f1e0d58df9e87890bc8f76",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/963e4488de46a745d7f1e0d58df9e87890bc8f76",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/963e4488de46a745d7f1e0d58df9e87890bc8f76",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/963e4488de46a745d7f1e0d58df9e87890bc8f76/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "1ce1e284951c88687acfb9f82952d7464dfaf50b",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1ce1e284951c88687acfb9f82952d7464dfaf50b",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/1ce1e284951c88687acfb9f82952d7464dfaf50b"
+      }
+    ]
+  },
+  {
+    "sha": "1ce1e284951c88687acfb9f82952d7464dfaf50b",
+    "node_id": "C_kwDOUjOz09oAKDFjZTFlMjg0OTUxYzg4Njg3YWNmYjlmODI5NTJkNzQ2NGRmYWY1MGI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T15:50:00Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T15:50:00Z"
+      },
+      "message": "统一为同一份代码：补回 lore 按需召回 / 图片附件 / identity 配置驱动\n\n- ga-api/ga_api_server.py 与本地现网代码对齐（此前为9月快照，已分叉）\n- 补回知识库按需召回(lore)：命中标题才注入，默认关闭，内容全由配置决定\n- 补回图片附件支持：图片块转 data URL 传给多模态模型\n- 所有涉及人名的逻辑收敛为 identity 配置项(self_nickname/special_nickname)\n- 配置模板/文档/CHANGELOG 同步更新",
+      "tree": {
+        "sha": "a0fb4596f60da291ba9eca98f6c06be4cd49ad6f",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/a0fb4596f60da291ba9eca98f6c06be4cd49ad6f"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/1ce1e284951c88687acfb9f82952d7464dfaf50b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1ce1e284951c88687acfb9f82952d7464dfaf50b",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/1ce1e284951c88687acfb9f82952d7464dfaf50b",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/1ce1e284951c88687acfb9f82952d7464dfaf50b/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2e23d8a79a29c77f975070d4cd4238406b24eb6b"
+      }
+    ]
+  },
+  {
+    "sha": "2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+    "node_id": "C_kwDOUjOz09oAKDJlMjNkOGE3OWEyOWM3N2Y5NzUwNzBkNGNkNDIzODQwNmIyNGViNmI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T15:16:47Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T15:16:47Z"
+      },
+      "message": "feat(ga-api): 新增 /llm 对话内切换底层模型\n\n- ga_api_server.py 支持 /llm 查看模型列表、/llm <编号> 切换底层真正工作的模型\n  （与飞书 /llm 行为一致），命令不进入对话历史，全局生效\n- 兼容 /v1/chat/completions、/v1/responses、/v1/completions，流式/非流式均可\n- GETTING_STARTED.md 新增使用说明；CHANGELOG 记录",
+      "tree": {
+        "sha": "c20c780a489a50ce65aa04cf0788e42dfdb4c93a",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/c20c780a489a50ce65aa04cf0788e42dfdb4c93a"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/2e23d8a79a29c77f975070d4cd4238406b24eb6b",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/2e23d8a79a29c77f975070d4cd4238406b24eb6b/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "6f674cada8c2598f44d8e6320594af2b2ddc9887",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6f674cada8c2598f44d8e6320594af2b2ddc9887",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/6f674cada8c2598f44d8e6320594af2b2ddc9887"
+      }
+    ]
+  },
+  {
+    "sha": "6f674cada8c2598f44d8e6320594af2b2ddc9887",
+    "node_id": "C_kwDOUjOz09oAKDZmNjc0Y2FkYThjMjU5OGY0NGQ4ZTYzMjA1OTRhZjJiMmRkYzk4ODc",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:55:00Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:55:00Z"
+      },
+      "message": "docs: 强调 macOS 授权为最易漏步骤（发送静默失败）\n\n- GETTING_STARTED.md 第 3 节新增「⚠️ 最容易漏的一步：macOS 授权」：\n  明确须给终端授予「辅助功能」+「自动化(微信)」，否则发送静默失败；\n  补充换终端需重新授权、授权后重启终端、排查优先级。\n- 补充三平台通用提醒：独立窗口标题对齐、屏幕坐标需自量、Wayland 需 XWayland。\n- CHANGELOG 同步。",
+      "tree": {
+        "sha": "624182ffa458b088d8ba209bca3089f79fc231d6",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/624182ffa458b088d8ba209bca3089f79fc231d6"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/6f674cada8c2598f44d8e6320594af2b2ddc9887",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6f674cada8c2598f44d8e6320594af2b2ddc9887",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/6f674cada8c2598f44d8e6320594af2b2ddc9887",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/6f674cada8c2598f44d8e6320594af2b2ddc9887/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f"
+      }
+    ]
+  },
+  {
+    "sha": "0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+    "node_id": "C_kwDOUjOz09oAKDBjZjVmYmM3OTcyMzVkYzNhM2E4MmM5YTgwZTFmMzAwNWVmZmQ2NWY",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:52:13Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:52:13Z"
+      },
+      "message": "docs: 前置\"必须先看/先做\"与升级必做清单\n\n按持有人要求，把\"开工前必读\"提到文档最前面，明确顺序与升级必做项，\n让接收方的 agent 第一眼就知道先读什么、先做什么。\n\n- GETTING_STARTED.md 新增「第 0 步：开工前必读」：必须先看的文件(按顺序)、\n  必须先做的事(顺序不可颠倒)、以及「从旧版升级必须做的 4 件事」。\n- ga-api/GA_API_DEPLOY_FOR_AGENT.md 文首新增「动手之前：你必须先看、先做」：\n  给对方 agent 的第一条指令，含先看 4 个文件、先做 5 件事、升级者必做 5 步。\n- CHANGELOG 同步记录。",
+      "tree": {
+        "sha": "b2a11f1595c8cbddd0b5303b944341a544725b1e",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/b2a11f1595c8cbddd0b5303b944341a544725b1e"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0cf5fbc797235dc3a3a82c9a80e1f3005effd65f/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "462fd7b9055727a1b686e22e839685fbc272cd82",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/462fd7b9055727a1b686e22e839685fbc272cd82",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/462fd7b9055727a1b686e22e839685fbc272cd82"
+      }
+    ]
+  },
+  {
+    "sha": "462fd7b9055727a1b686e22e839685fbc272cd82",
+    "node_id": "C_kwDOUjOz09oAKDQ2MmZkN2I5MDU1NzI3YTFiNjg2ZTIyZTgzOTY4NWZiYzI3MmNkODI",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:49:20Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:49:20Z"
+      },
+      "message": "docs: 新增上手指南并完成 ga-api 侧去个人化\n\n给朋友和她们的 agent 一份可直接照做的部署文档，并把 ga-api 侧残留的\n个人化命名彻底清成中性词，与微信监控侧保持一致。\n\n新增：\n- GETTING_STARTED.md：整体架构、部署顺序(API→私聊→群聊)、配置提醒清单、\n  平台差异、跑通验证、排错对照表；根 README 顶部与文档索引加入入口。\n- GETTING_STARTED.md 第 2.5 节「命名变更提醒」：旧名→新名对照表，并重点\n  强调两类连带影响，要求 agent 部署时主动核对——\n  · 记忆宫殿 wing 名 xavier_api→agent_api：升级且已用过宫殿者直接改名会\n    读不到旧记忆，须先与持有人确认旧数据所在 wing，不得擅自改名；\n  · 模型 ID：ga_api_config.json 的 model.id ↔ 监控配置 agent.model ↔\n    check_ga_api.sh 测试模型名三处必须一致，改后须重启 API 服务。\n\n修复(ga-api 侧去个人化)：\n- ga_api_server.py / ga_api_native_server.py：model.id、model.name、\n  mempalace.wing、会话标题、环境变量名、日志与注释中的个人名。\n- ga_api_config.example.json、ga_api.env.example、check_ga_api.sh、\n  ga-api/README.md、ga-api/UPGRADE.md、GA_API_DEPLOY_FOR_AGENT.md 同步更新。\n- UPGRADE.md 保留的旧名仅用于旧→新迁移指引。\n\n校验：py_compile / sh -n / json.load 全部通过；禁词扫描干净。",
+      "tree": {
+        "sha": "b40389ea1a229f491268a19c895d206a1cfebc78",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/b40389ea1a229f491268a19c895d206a1cfebc78"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/462fd7b9055727a1b686e22e839685fbc272cd82",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/462fd7b9055727a1b686e22e839685fbc272cd82",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/462fd7b9055727a1b686e22e839685fbc272cd82",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/462fd7b9055727a1b686e22e839685fbc272cd82/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "888704630c7c2c8ead8a56c792f43ff034f1af40",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/888704630c7c2c8ead8a56c792f43ff034f1af40",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/888704630c7c2c8ead8a56c792f43ff034f1af40"
+      }
+    ]
+  },
+  {
+    "sha": "888704630c7c2c8ead8a56c792f43ff034f1af40",
+    "node_id": "C_kwDOUjOz09oAKDg4ODcwNDYzMGM3YzJjOGVhZDhhNTZjNzkyZjQzZmYwMzRmMWFmNDA",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:39:27Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-19T14:39:27Z"
+      },
+      "message": "feat(wechat): 去 Xavier 化、跨平台通用化与来源暗号配置\n\n将微信私聊 / 群聊监控程序彻底去个人化，朋友克隆后改配置即可使用。\n\n变更：\n- 主脚本改名：wechat_xavier_private_monitor.py → wechat_private_monitor.py\n             wechat_xavier_group_monitor.py   → wechat_group_monitor.py\n- 配置字段 xavier.* → agent.*；环境变量 XAVIER_API_KEY → AGENT_API_KEY\n- 自称改由 self_nickname 配置注入，移除硬编码角色名\n- 私聊新增 source_marker（默认【.跨次元微信私聊.】）与 private_system_prompt 可配置项\n- 私聊只发本轮新消息，历史由对面 agent 维护，避免上下文重复膨胀\n- 平台发送适配器统一为 wechat_adapter（Windows/macOS/Linux）\n- 脱敏：移除示例与适配器中的真实路径、内网地址与个人昵称\n\n文档：README 版本对齐 2026-10-19；CHANGELOG 新增条目与升级指引。\n测试：test_generation_breaker.py 8/8 通过；全部 .py 语法通过。",
+      "tree": {
+        "sha": "7b790fa44c367e3694cd7a58714d35ca173c067b",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/7b790fa44c367e3694cd7a58714d35ca173c067b"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/888704630c7c2c8ead8a56c792f43ff034f1af40",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/888704630c7c2c8ead8a56c792f43ff034f1af40",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/888704630c7c2c8ead8a56c792f43ff034f1af40",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/888704630c7c2c8ead8a56c792f43ff034f1af40/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "0c2381275b65d66a61c58a69c0443c49647bc751",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0c2381275b65d66a61c58a69c0443c49647bc751",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0c2381275b65d66a61c58a69c0443c49647bc751"
+      }
+    ]
+  },
+  {
+    "sha": "0c2381275b65d66a61c58a69c0443c49647bc751",
+    "node_id": "C_kwDOUjOz09oAKDBjMjM4MTI3NWI2NWQ2NmE2MWM1OGE2OWMwNDQzYzQ5NjQ3YmM3NTE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-17T17:00:35Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-17T17:00:35Z"
+      },
+      "message": "fix(wechat): stabilize private monitor ordering and sanitize config",
+      "tree": {
+        "sha": "aedf4faf6ccd1f4b01108105c477967c30a6cb73",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/aedf4faf6ccd1f4b01108105c477967c30a6cb73"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/0c2381275b65d66a61c58a69c0443c49647bc751",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0c2381275b65d66a61c58a69c0443c49647bc751",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/0c2381275b65d66a61c58a69c0443c49647bc751",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/0c2381275b65d66a61c58a69c0443c49647bc751/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "35c9bdff3fc92108596276f7782473189998ee53",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/35c9bdff3fc92108596276f7782473189998ee53",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/35c9bdff3fc92108596276f7782473189998ee53"
+      }
+    ]
+  },
+  {
+    "sha": "35c9bdff3fc92108596276f7782473189998ee53",
+    "node_id": "C_kwDOUjOz09oAKDM1YzliZGZmM2ZjOTIxMDg1OTYyNzZmNzc4MjQ3MzE4OTk5OGVlNTM",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-14T14:13:02Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-14T14:49:22Z"
+      },
+      "message": "docs: add AGENT_GROUP_DEPLOY_GUIDE.md for agent peer deployment",
+      "tree": {
+        "sha": "c806779e0079e5dfc4b65f6e46ce735b036ef98e",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/c806779e0079e5dfc4b65f6e46ce735b036ef98e"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/35c9bdff3fc92108596276f7782473189998ee53",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/35c9bdff3fc92108596276f7782473189998ee53",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/35c9bdff3fc92108596276f7782473189998ee53",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/35c9bdff3fc92108596276f7782473189998ee53/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "8ac0a3b0be8648f60bc14ecc938474562319b25a",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/8ac0a3b0be8648f60bc14ecc938474562319b25a",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/8ac0a3b0be8648f60bc14ecc938474562319b25a"
+      }
+    ]
+  },
+  {
+    "sha": "8ac0a3b0be8648f60bc14ecc938474562319b25a",
+    "node_id": "C_kwDOUjOz09oAKDhhYzBhM2IwYmU4NjQ4ZjYwYmMxNGVjYzkzODQ3NDU2MjMxOWIyNWE",
+    "commit": {
+      "author": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-14T13:46:08Z"
+      },
+      "committer": {
+        "name": "lieben",
+        "email": "lieben@users.noreply.github.com",
+        "date": "2026-10-14T14:49:22Z"
+      },
+      "message": "feat(wechat): configurable special_nickname, message debounce and accurate mention",
+      "tree": {
+        "sha": "99612e4e2391f66ef10c7ab0b45d0dc52244354d",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/trees/99612e4e2391f66ef10c7ab0b45d0dc52244354d"
+      },
+      "url": "https://api.github.com/repos/lieben/ga-cyber-lover/git/commits/8ac0a3b0be8648f60bc14ecc938474562319b25a",
+      "comment_count": 0,
+      "verification": {
+        "verified": false,
+        "reason": "unsigned",
+        "signature": null,
+        "payload": null,
+        "verified_at": null
+      }
+    },
+    "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/8ac0a3b0be8648f60bc14ecc938474562319b25a",
+    "html_url": "https://github.com/lieben/ga-cyber-lover/commit/8ac0a3b0be8648f60bc14ecc938474562319b25a",
+    "comments_url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/8ac0a3b0be8648f60bc14ecc938474562319b25a/comments",
+    "author": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "lieben",
+      "id": 1177278,
+      "node_id": "MDQ6VXNlcjExNzcyNzg=",
+      "avatar_url": "https://avatars.githubusercontent.com/u/1177278?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/lieben",
+      "html_url": "https://github.com/lieben",
+      "followers_url": "https://api.github.com/users/lieben/followers",
+      "following_url": "https://api.github.com/users/lieben/following{/other_user}",
+      "gists_url": "https://api.github.com/users/lieben/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/lieben/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/lieben/subscriptions",
+      "organizations_url": "https://api.github.com/users/lieben/orgs",
+      "repos_url": "https://api.github.com/users/lieben/repos",
+      "events_url": "https://api.github.com/users/lieben/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/lieben/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+      {
+        "sha": "cfdc52d929056fdd35175b0c926bcd5012539796",
+        "url": "https://api.github.com/repos/lieben/ga-cyber-lover/commits/cfdc52d929056fdd35175b0c926bcd5012539796",
+        "html_url": "https://github.com/lieben/ga-cyber-lover/commit/cfdc52d929056fdd35175b0c926bcd5012539796"
+      }
+    ]
+  }
+]

@@ -832,6 +832,11 @@ def extract_ui_messages(path):
     try:
         with open(path, encoding='utf-8', errors='replace') as f: content = f.read()
     except Exception: return []
+    return extract_ui_messages_text(content)
+
+
+def extract_ui_messages_text(content):
+    """Replay log text, including archive members, without extracting to disk."""
     pairs = _pairs(content)
     if not pairs: return []
     # tool_results live in the *next* Prompt's content; index look-ahead.
@@ -839,25 +844,33 @@ def extract_ui_messages(path):
     for i in range(len(pairs) - 1):
         next_tr[i] = _tool_results_from_prompt(pairs[i + 1][0])
 
+    stamps = re.findall(r'^=== Prompt ===\s+(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d)', content, re.M)
     out, assistant, round_turn = [], None, 0
     for i, (prompt, response) in enumerate(pairs):
+        try:
+            ts = time.mktime(time.strptime(stamps[i], '%Y-%m-%d %H:%M:%S'))
+        except (IndexError, ValueError, OverflowError):
+            ts = None
         user = _user_text(prompt)
         seg = _format_response_segment(response, next_tr[i])
         if user:
             if assistant is not None: out.append(assistant)
-            out.append({'role': 'user', 'content': user})
+            out.append({'role': 'user', 'content': user, 'ts': ts})
             # Turn 1 marker too — agent_loop yields one per LLM call, including the
             # first, so fold_turns treats every non-last call uniformly as a fold.
-            assistant = {'role': 'assistant',
-                         'content': f"\n\n**LLM Running (Turn 1) ...**\n\n{seg}"}
+            step = f"\n\n**LLM Running (Turn 1) ...**\n\n{seg}"
+            assistant = {'role': 'assistant', 'ts': ts,
+                         'content': step, 'turn_segs': [step]}
             round_turn = 1
         else:
             if assistant is None:
-                assistant = {'role': 'assistant', 'content': ''}
+                assistant = {'role': 'assistant', 'content': '', 'turn_segs': []}
                 round_turn = 1
             round_turn += 1
             marker = f"\n\n**LLM Running (Turn {round_turn}) ...**\n\n"
-            assistant['content'] = (assistant['content'] or '') + marker + seg
+            step = marker + seg
+            assistant['turn_segs'].append(step)
+            assistant['content'] = (assistant['content'] or '') + step
     if assistant is not None: out.append(assistant)
     return [m for m in out if (m.get('content') or '').strip()]
 

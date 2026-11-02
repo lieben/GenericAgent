@@ -60,9 +60,16 @@ def _install_source_tracker():
     这里在入队时顺手记一份，供后续 agent_before 判定渠道。
     """
     try:
-        from agentmain import GenericAgent
+        import agentmain
+        GenericAgent = getattr(agentmain, "GenericAgent", None)
+        if GenericAgent is None:
+            # 兼容官方新版拆分架构，从 ga 模块获取
+            import ga
+            GenericAgent = getattr(ga, "GenericAgent", None)
+        if GenericAgent is None:
+            return
     except Exception as e:
-        sys.stderr.write(f"[non_api_memory] import GenericAgent failed: {e}\n")
+        sys.stderr.write(f"[non_api_memory] get GenericAgent failed: {e}\n")
         return
     if getattr(GenericAgent, "_non_api_source_patched", False):
         return

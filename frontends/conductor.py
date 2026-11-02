@@ -1,6 +1,5 @@
 import os, sys, re, time, json, uuid, queue, asyncio, threading, argparse, base64, secrets
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Dict, Any, Optional, List
 from contextlib import asynccontextmanager, suppress
 
@@ -11,7 +10,6 @@ from pydantic import BaseModel
 
 FRONTENDS_DIR = os.path.dirname(os.path.abspath(__file__))
 if FRONTENDS_DIR not in sys.path: sys.path.insert(0, FRONTENDS_DIR)
-from desktop_settings import DesktopSettingsError, update_settings
 
 def _resolve_ga_root() -> str:
     """Use the external core selected by the package-owned desktop bridge when valid."""
@@ -72,41 +70,6 @@ HOST = args.host
 PORT = args.port
 
 
-SETTINGS_PATH = Path.home() / ".ga_desktop_settings.json"
-
-
-def _settings_doc() -> dict:
-    try:
-        doc = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
-        return doc if isinstance(doc, dict) else {}
-    except Exception:
-        return {}
-
-
-def _persist_conductor_llm_no(llm_no: int) -> None:
-    def mutate(document: dict) -> None:
-        section = document.get("conductor")
-        if not isinstance(section, dict):
-            section = {}
-            document["conductor"] = section
-        section["llmNo"] = llm_no
-
-    update_settings(SETTINGS_PATH, mutate)
-
-
-def _conductor_llm_no() -> Optional[int]:
-    """Read the model index bound to the conductor session.
-    Falls back to the legacy desktop default ui.llmNo for existing installs."""
-    doc = _settings_doc()
-    for section in (doc.get("conductor"), doc.get("ui")):
-        if isinstance(section, dict) and section.get("llmNo") is not None:
-            try:
-                return int(section.get("llmNo"))
-            except (TypeError, ValueError):
-                pass
-    return None
-
-
 def _client_usable(agent: "GenericAgent") -> bool:
     return hasattr(getattr(agent, "llmclient", None), "backend")
 
@@ -131,89 +94,12 @@ def _activate_model(agent: "GenericAgent", no: int) -> None:
     agent.next_llm(no)
 
 
-def _runtime_model_state(agent: "GenericAgent", configured: Optional[int], reason: Optional[str]) -> dict:
-    effective = getattr(agent, "llm_no", None) if _client_usable(agent) else None
-    current = None
-    if _client_usable(agent):
-        with suppress(Exception):
-            current = str(agent.llmclient.backend.name)
-    return {"configured": configured, "effective": effective,
-            "fallbackReason": reason, "current": current}
-
-
-def _apply_desktop_model(agent: "GenericAgent") -> dict:
-    """Make the conductor's session reflect the current desktop config before a task:
-    switch to its bound model if one is set, otherwise still refresh sessions from
-    mykey so live key/model edits (e.g. importing keys) take effect without a restart.
-    next_llm() already reloads internally; the no-bound-model branch must reload too,
-    or a conductor started on an empty/stale mykey would never pick up imported keys."""
-    doc = _settings_doc()
-    conductor_cfg = doc.get("conductor") if isinstance(doc.get("conductor"), dict) else {}
-    ui_cfg = doc.get("ui") if isinstance(doc.get("ui"), dict) else {}
-    raw_configured = conductor_cfg.get("llmNo")
-    configured = _parse_model_no(raw_configured)
-    ui_default = _parse_model_no(ui_cfg.get("llmNo"))
-
-    try:
-        agent.load_llm_sessions()  # mtime-guarded; rebuilds only when mykey changed
-    except Exception as e:
-        print(f"[conductor] failed to refresh model sessions: {e}", file=sys.stderr)
-
-    clients = getattr(agent, "llmclients", []) or []
-
-    configured_failed = False
-    if _usable_model(agent, configured):
-        try:
-            _activate_model(agent, configured)
-            return _runtime_model_state(agent, configured, None)
-        except Exception as e:
-            configured_failed = True
-            print(f"[conductor] configured model #{configured} is unavailable: {e}", file=sys.stderr)
-
-    if _usable_model(agent, ui_default):
-        if raw_configured is None:
-            reason = "ui_default"
-        elif configured_failed:
-            reason = "configured_unavailable"
-        elif configured is not None:
-            reason = "configured_unavailable" if 0 <= configured < len(clients) else "invalid_configured"
-        else:
-            reason = "invalid_configured"
-        try:
-            _activate_model(agent, ui_default)
-            return _runtime_model_state(agent, configured, reason)
-        except Exception as e:
-            print(f"[conductor] UI default model #{ui_default} is unavailable: {e}", file=sys.stderr)
-
-    for i, client in enumerate(clients):
-        if hasattr(client, "backend"):
-            try:
-                _activate_model(agent, i)
-                return _runtime_model_state(agent, configured, "first_available")
-            except Exception:
-                continue
-
-    print("[conductor] no usable model is available", file=sys.stderr)
-    return {"configured": configured, "effective": None,
-            "fallbackReason": "no_models", "current": None}
-
-
-def _selected_conductor_llm_no(agent: "GenericAgent") -> int:
-    configured = _conductor_llm_no()
-    return configured if _usable_model(agent, configured) else agent.llm_no
-
-
-def _set_conductor_llm_no(agent: "GenericAgent", value: Any) -> int:
-    """Persist the standalone UI binding without mutating an in-flight client.
-
-    The Conductor loop applies this binding at its existing idle task boundary, so
-    a selection made immediately before sending a message controls that next turn.
-    """
-    no = _parse_model_no(value)
-    if no is None or not _usable_model(agent, no):
-        raise ValueError(f"llm index out of range or unavailable: {value}")
-    _persist_conductor_llm_no(no)
-    return no
+def _runtime_model_state(agent: "GenericAgent") -> dict:
+    usable = _client_usable(agent)
+    return {"configured": None,
+            "effective": agent.llm_no if usable else None,
+            "fallbackReason": None if usable else "no_models",
+            "current": str(agent.llmclient.backend.name) if usable else None}
 
 
 def _select_llm(agent: "GenericAgent", llm: Any) -> bool:
@@ -408,6 +294,7 @@ class SubagentPool:
                     "prompt": s.prompt,
                     "reply": (extract_last_summary(s.reply) if s.status == "running" else extract_last_text_reply(s.reply)) if s.reply else "",
                     "status": s.status,
+                    "llm": s.agent.get_llm_name(),
                     "created_at": s.created_at,
                     "updated_at": s.updated_at,
                 }
@@ -447,7 +334,7 @@ class SubagentPool:
         agent.inc_out = True
         agent.verbose = False
         agent.no_print = True
-        if not _select_llm(agent, llm): _apply_desktop_model(agent)
+        _select_llm(agent, llm)
         th = start_agent_runner(agent, f"subagent-{sid}")
         state = SubAgentState(id=sid, agent=agent, prompt=prompt, status="running", thread=th)
         with self.lock: self.subagents[sid] = state
@@ -522,6 +409,20 @@ subagent完成流程：
    ② 用户同意后该执行的完整任务指令（approval通过会直接作为subagent的prompt派发，必须具体到可直接执行）。""",
 }
 
+HEADER = f"""你是攻关总管，对团队达成用户目标负责。绝不亲自执行或探测；实作与核验交给subagent，你负责战略、组织、验收和交付。
+API: http://{HOST}:{PORT}；requests，GET /readme查用法，GET /chat读未读对话，GET /subagent看状态；POST /chat是唯一对用户说话方式。
+
+原则：
+- 围绕目标识别关键问题、设计攻关路线，按需分工、并行或复用；明确任务结果与验收标准，执行细节交给下属。
+- 不擅改用户目标；可提出待验证假说，不将假说当事实。
+- 围绕用户目标判断结果是否达标，必要时委派核验。
+- 根据反馈判断进展与瓶颈，调整路线、分工和资源，组织各项结果形成整体交付。
+- 达标前提下降低总成本，合并反馈；本轮必要派遣/纠偏完成即结束回复，等下次事件，禁止轮询或原地等结果；整体达标才交付。
+- 仅为用户独有信息或必要授权提问；文件路径用反引号包裹。
+
+需要处理：
+"""
+
 class Conductor:
     LOG_MAX = 50
 
@@ -532,23 +433,29 @@ class Conductor:
         self._runner_thread: Optional[threading.Thread] = None
         self.log: list = []   
         self._model_lock = threading.RLock()
-        self._model_state = {
-            "configured": None,
-            "effective": None,
-            "fallbackReason": "no_models",
-            "current": None,
-            "running": False,
-        }
+        self._model_running = False
 
     def model_snapshot(self) -> dict:
         with self._model_lock:
-            return dict(self._model_state)
+            return {**_runtime_model_state(self.agent), "running": self._model_running}
 
     def _publish_model_state(self, state: dict, running: bool) -> None:
         snapshot = {**state, "running": bool(running)}
         with self._model_lock:
-            self._model_state = snapshot
+            self._model_running = bool(running)
         schedule_broadcast({"type": "model", "model": snapshot})
+
+    def select_model(self, value: Any) -> int:
+        with self._model_lock:
+            if self._model_running or self.agent.task_queue.unfinished_tasks:
+                raise ValueError("conductor is busy; switch models after the task finishes")
+            no = _parse_model_no(value)
+            if no is None:
+                raise ValueError(f"invalid model index: {value}")
+            self.agent.load_llm_sessions()
+            _activate_model(self.agent, no)
+            self._publish_model_state(_runtime_model_state(self.agent), running=False)
+            return self.agent.llm_no
 
     def notify(self, event: dict): self.inbox.put(event)
 
@@ -579,29 +486,21 @@ class Conductor:
             self.log.pop(0)
         schedule_broadcast({"type": "log", "item": item})
 
-    def _build_prompt(self, events: list) -> str:
+    def _build_prompt(self, events: list) -> Optional[str]:
+        kind = events[0].get("type") if events else "wake"
+        self._pending = []
+        if kind == "user_message":
+            msgs = self._pending = [m for m in chat_messages if m.get("role") == "user" and not m.get("read")]
+            if not msgs: return None
+            m = msgs[-1]
+            return f"[用户消息] {len(msgs)}条未读" + ("，GET /chat 读取" if len(msgs) > 1 else "") + "；按GET /readme/usermsg处理。\n<user_last_msg>\n" + m["msg"] + "".join(f"\n附件: `{f['path']}`" for f in m.get("files") or [] if f.get("path")) + "\n</user_last_msg>"
         running, stopped = pool.counts()
-        unread = sum(1 for m in chat_messages if m.get("role") == "user" and not m.get("read"))
         done_count = sum(1 for e in events if e.get("type") == "subagent_done")
-        event_type = events[0].get("type") if events else "wake"; im_sources = [e.get("source") for e in events if e.get("type") == "im_signal"]
-        if event_type == "user_message": summary = f"[用户消息] {unread}条未读用户消息，GET /chat 读取；按GET /readme/usermsg处理。"
-        elif event_type == "subagent_done": summary = f"[subagent完成] {done_count}个完成报告；GET /subagent 查看并验收；IM subagent完成报告按GET /readme/im处理，其他subagent完成报告按GET /readme/subagent处理。"
-        elif event_type == "im_signal": summary = f"[IM信号] {', '.join(im_sources)} 有新消息；" + "；".join(f"GET /im_prompt/{s}取采集prompt" for s in im_sources) + "；尽量复用已有subagent。"
-        else: summary = f"[唤醒] subagents: {running} running, {stopped} stopped | {unread}条用户未读消息, {done_count}个subagent完成报告"
-        base = f"http://{HOST}:{PORT}"
-        return f"""你是agent总管。用户只和你对话，你负责调度、验收、交付，目标是降低用户管理多个agent的负担。
-API: {base}；requests，GET /readme查用法，GET /chat读未读对话，GET /subagent看状态；POST /chat是唯一对用户说话方式。
-
-铁律：
-- 绝不亲自执行任务/探测环境；一切执行交给subagent。你只分析、派遣、审查、沟通。
-- 每次唤醒只做最小必要动作（发消息/开subagent/reply/keyinfo/abort），做完立刻停，等待下次事件唤醒。
-- 改写prompt时严禁添加用户未提及的假设、工具、前提条件。只能精炼/结构化用户原意，不能脑补，只能做很小的改写
-
-原则：
-- 信任subagent足够聪明，不要写具体步骤和容易探测的信息；能自己判断的自己判断，只在真正需要用户决策时打扰。
-- 向用户交付文件时，路径用反引号包裹。\n
-需要处理：
-{summary}"""
+        im_sources = [e.get("source") for e in events if e.get("type") == "im_signal"]
+        if kind == "subagent_done": return f"[subagent完成] {done_count}个完成报告；GET /subagent 查看并验收；IM subagent完成报告按GET /readme/im处理，其他subagent完成报告按GET /readme/subagent处理。"
+        if kind == "im_signal": return f"[IM信号] {', '.join(im_sources)} 有新消息；" + "；".join(f"GET /im_prompt/{s}取采集prompt" for s in im_sources) + "；尽量复用已有subagent。"
+        unread = sum(1 for m in chat_messages if m.get("role") == "user" and not m.get("read"))
+        return f"[唤醒] subagents: {running} running, {stopped} stopped | {unread}条用户未读消息, {done_count}个subagent完成报告"
 
     def _drain(self, dq: "queue.Queue", events: list) -> str:
         event_label = ",".join(e.get("type", "") for e in events) or "wake"
@@ -657,32 +556,34 @@ API: {base}；requests，GET /readme查用法，GET /chat读未读对话，GET /
                 # mutate the live client until that previous task has reached
                 # ``task_done``; the queue join is the authoritative idle barrier.
                 self._wait_for_agent_idle()
-                # Settings can change while this long-lived process remains healthy.
-                # Refresh only at the task boundary so an in-flight task keeps its
-                # client, while the next task observes the newly persisted binding.
-                model_state = _apply_desktop_model(self.agent)
-                if model_state.get("effective") is None:
-                    self._publish_model_state(model_state, running=False)
-                    self._record_unavailable_model(events)
-                    deferred_events = events
-                    continue
-                kind = events[0].get("type")
-                other_events = [event for event in events if event.get("type") != kind]
-                events = [event for event in events if event.get("type") == kind]
-                for event in other_events:
-                    self.inbox.put(event)
-                prompt = self._build_prompt(events)
-                self._publish_model_state(model_state, running=True)
+                with self._model_lock:
+                    self.agent.load_llm_sessions()
+                    model_state = _runtime_model_state(self.agent)
+                    if model_state.get("effective") is None:
+                        self._publish_model_state(model_state, running=False)
+                        self._record_unavailable_model(events)
+                        deferred_events = events
+                        continue
+                    kind = events[0].get("type")
+                    other_events = [event for event in events if event.get("type") != kind]
+                    events = [event for event in events if event.get("type") == kind]
+                    for event in other_events:
+                        self.inbox.put(event)
+                    prompt = self._build_prompt(events)
+                    if prompt is None: continue
+                    dq = self.agent.put_task(HEADER + prompt, source="conductor")
+                    self._publish_model_state(model_state, running=True)
                 try:
-                    dq = self.agent.put_task(prompt, source="conductor")
                     self._drain(dq, events)
+                    for m in self._pending: m["read"] = True  # mark only after the turn finishes; failures stay unread
+                    if self._pending: schedule_broadcast({"type": "chat_read"})
                 finally:
                     self._publish_model_state(model_state, running=False)
             except Exception as e: print(f"Conductor error: {e}")
 
     def start(self):
         self.agent = GenericAgent()
-        self._publish_model_state(_apply_desktop_model(self.agent), running=False)
+        self._publish_model_state(_runtime_model_state(self.agent), running=False)
         threading.Thread(target=self._run, name="conductor-loop", daemon=True).start()
 
 
@@ -777,6 +678,7 @@ def get_subagent(sid: str, max_len: int = 5000):
     cleaned = clean_log_text(s.reply or "")
     return {"id": s.id, "prompt": s.prompt, "status": s.status,
             "reply": cleaned[-max_len:] if len(cleaned) > max_len else cleaned,
+            "llm": s.agent.get_llm_name(), "log": s.agent.log_path,
             "created_at": s.created_at, "updated_at": s.updated_at}
 
 INSTR_DISPATCHED = "Task received. I'll handle THIS TASK from here. You MUST to do other task or end your reply."
@@ -809,11 +711,12 @@ def api_subagent_action(sid: str, body: SubagentActionIn):
     return JSONResponse({"error": f"unknown action: {body.action}"}, status_code=400)
 
 @app.get("/chat")
-def api_get_chat(last: int = 20):
+def api_get_chat(last: int = 20, mark_read: bool = True):
     items = [m.copy() for m in chat_messages[-last:]]
-    for m in chat_messages:
-        if m.get("role") == "user" and not m.get("read"): m["read"] = True
-    schedule_broadcast({"type": "chat_read"})
+    if mark_read:
+        for m in chat_messages:
+            if m.get("role") == "user" and not m.get("read"): m["read"] = True
+        schedule_broadcast({"type": "chat_read"})
     return {"items": items}
 
 @app.post("/chat")
@@ -837,17 +740,17 @@ async def websocket(ws: WebSocket):
                             "log": conductor.log, "running": running,
                             "model": conductor.model_snapshot(),
                             "llms": conductor.agent.list_llms(),
-                            "llm": _selected_conductor_llm_no(conductor.agent)})
+                            "llm": conductor.agent.llm_no})
         while True:
             data = await ws.receive_json()
             if "llm" in data:
                 try:
-                    llm_no = _set_conductor_llm_no(conductor.agent, data["llm"])
-                except (TypeError, ValueError, OSError, DesktopSettingsError) as error:
+                    llm_no = conductor.select_model(data["llm"])
+                except (TypeError, ValueError, RuntimeError) as error:
                     await ws.send_json({
                         "type": "model_error",
                         "error": str(error),
-                        "llm": _selected_conductor_llm_no(conductor.agent),
+                        "llm": conductor.agent.llm_no,
                     })
                 else:
                     await broadcast({"type": "model_selected", "llm": llm_no})

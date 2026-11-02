@@ -239,9 +239,14 @@ class Session:
     updated_at: float = field(default_factory=time.time)
     messages: List[dict] = field(default_factory=list)
     msg_seq: int = 0
+    output_cache_source: Any = None
+    output_cache_count: int = 0
+    output_cache_tail: int = 0
+    output_cache_signature: Any = None
     partial: Optional[dict] = None
     status: str = "idle"  # idle|running|error|cancelled
     agent: Any = None
+    pending_restore: bool = False  # Only records read back from storage await restoration.
     thread: Optional[threading.Thread] = None
     cancel_requested: bool = False
     active_turn_id: str = ""
@@ -250,9 +255,12 @@ class Session:
     untitled: bool = True
     plan_scan_baseline: int = 0
     plan_path: str = ""
-    llm_history: Optional[List[dict]] = None
+    first_message: str = ""
+    first_message_at: float = 0
+    log_refs: List[dict] = field(default_factory=list)
+    has_content: bool = False
     # 该会话绑定的模型下标(mykey.py 配置块顺序,== agent.llmclients 下标)。
-    # None = 未绑定,发消息时回退到全局默认 ui.llmNo,保持旧会话平滑迁移。
+    # None = 未显式选择，保留 GenericAgent 构造时的模型。
     llm_no: Optional[int] = None
     # 当前正在执行的 turn 使用的模型。仅运行期存在，不写入 session JSON。
     running_llm_no: Optional[int] = None
@@ -334,20 +342,16 @@ class AgentManager:
         return str(Path(self.ga_root) / "mykey.py")
 
     def _session_dict(self, s: "Session") -> dict:
-        llm_hist = None
-        if s.agent and hasattr(s.agent, 'llmclient'):
-            try: llm_hist = s.agent.llmclient.backend.history
-            except Exception: pass
-        if llm_hist is None:
-            llm_hist = s.llm_history
+        from desktop_history import metadata
         return {"id": s.id, "title": s.title, "cwd": s.cwd,
                 "created_at": s.created_at, "updated_at": s.updated_at,
-                "messages": s.messages, "msg_seq": s.msg_seq,
-                "pinned": s.pinned, "untitled": s.untitled,
+                "msg_seq": s.msg_seq, "pinned": s.pinned, "untitled": s.untitled,
                 "plan_scan_baseline": s.plan_scan_baseline,
-                "plan_path": s.plan_path or "",
-                "llm_no": s.llm_no,
-                "llm_history": llm_hist}
+                "plan_path": s.plan_path or "", "llm_no": s.llm_no,
+                **metadata({"first_message": s.first_message,
+                            "first_message_at": s.first_message_at,
+                            "log_refs": s.log_refs, "has_content": s.has_content,
+                            "messages": s.messages})}
 
     def _session_file(self, sid: str) -> Path:
         return self._sessions_dir / f"{sid}.json"
@@ -425,9 +429,6 @@ class AgentManager:
             self._sessions_dir.mkdir(parents=True, exist_ok=True)
             with self.lock:
                 data = self._session_dict(s)
-                data["messages"] = copy.deepcopy(data["messages"])
-                if data.get("llm_history"):
-                    data["llm_history"] = copy.deepcopy(data["llm_history"])
             tmp.write_text(json.dumps(data, ensure_ascii=False, default=str), encoding="utf-8")
             os.replace(tmp, self._session_file(s.id))
         except Exception as e:
@@ -452,22 +453,19 @@ class AgentManager:
         for s in sessions:
             self._persist_session(s, strict=strict)
 
-    def _session_from_item(self, item: dict) -> "Session":
+    def _session_from_item(self, item: dict) -> Optional["Session"]:
+        from desktop_history import metadata
+        meta = metadata(item)
         item = canonical_session_record(item, default_cwd=self.ga_root)
-        msgs = item["messages"]
-        return Session(id=item["id"], title=item["title"],
-                       cwd=item["cwd"],
-                       created_at=item["created_at"],
-                       updated_at=item["updated_at"],
-                       messages=msgs,
-                       msg_seq=item["msg_seq"],
-                       pinned=item["pinned"],
-                       untitled=item["untitled"],
-                       plan_scan_baseline=_load_plan_baseline(item, msgs),
+        return Session(id=item["id"], title=item["title"], cwd=item["cwd"],
+                       created_at=item["created_at"], updated_at=item["updated_at"],
+                       pinned=item["pinned"], untitled=item["untitled"],
+                       plan_scan_baseline=item["plan_scan_baseline"],
                        plan_path=_sanitize_desktop_plan_path(item["id"], item["plan_path"]),
-                       status="idle", agent=None,
-                       llm_history=item["llm_history"],
-                       llm_no=item["llm_no"])
+                       llm_no=item["llm_no"],
+                       first_message=meta["first_message"], first_message_at=meta["first_message_at"],
+                       log_refs=meta["log_refs"], has_content=meta["has_content"],
+                       pending_restore=True)
 
     def _load_sessions(self):
         # New format: one file per session under temp/desktop_sessions/.
@@ -479,7 +477,11 @@ class AgentManager:
                         if not _is_desktop_session_id(item.get("id")):
                             continue
                         sess = self._session_from_item(item)
+                        if sess is None:
+                            f.write_text(json.dumps(canonical_session_record(item), ensure_ascii=False), encoding="utf-8")
+                            continue
                         self.sessions[sess.id] = sess
+                        self._persist_session(sess)
                     except Exception as e:
                         bridge_print(f"[bridge] load session {f.name} failed: {e}")
         except Exception as e:
@@ -496,19 +498,18 @@ class AgentManager:
                         continue
                     try:
                         sess = self._session_from_item(item)
+                        if sess is None:
+                            continue
                         self.sessions[sess.id] = sess
                         self._persist_session(sess)
                     except Exception as e:
                         bridge_print(f"[bridge] migrate session failed: {e}")
                 # Retire the legacy file so we do not migrate again next launch.
                 with contextlib.suppress(Exception):
-                    self._sessions_file.rename(
-                        self._sessions_file.parent / (self._sessions_file.name + ".migrated"))
+                    self._sessions_file.unlink()
         except Exception as e:
             bridge_print(f"[bridge] migrate sessions failed: {e}")
 
-        if self.sessions:
-            self.active_session_id = max(self.sessions.values(), key=lambda s: s.updated_at).id
 
     def import_sessions(self, source_dir: str) -> dict:
         """把 source 的桌面会话合并进当前列表(按 id 去重)。
@@ -559,6 +560,9 @@ class AgentManager:
                 except ValueError:
                     skipped += 1
                     continue
+                if sess is None:
+                    skipped += 1
+                    continue
                 self.sessions[sid] = sess
                 new_sessions.append(sess)
                 added += 1
@@ -594,13 +598,6 @@ class AgentManager:
     def _format_py_dict(d: dict) -> str:
         lines = [f"    '{k}': {json.dumps(v, ensure_ascii=False)}," if isinstance(v, str) else f"    '{k}': {v}," for k, v in d.items()]
         return "{\n" + "\n".join(lines) + "\n}"
-
-    def _invalidate_mykey_cache(self) -> None:
-        self.ensure_ga_import_path()
-        sys.modules.pop("mykey", None)
-        with contextlib.suppress(Exception):
-            import llmcore
-            llmcore._mykey_mtime = None
 
     def _profile_keys(self) -> List[str]:
         self.ensure_ga_import_path()
@@ -679,34 +676,15 @@ class AgentManager:
 
     def _save_mykey_text(self, text: str) -> list:
         self._mykey_file().write_text(text, encoding="utf-8")
-        self._invalidate_mykey_cache()
-        self._reload_live_agents()
-        return self.list_model_profiles()
-
-    def _reload_live_agents(self) -> None:
-        """mykey.py 改动后，强制所有活着的会话 agent 重建 LLM session，让新 key/模型
-        立即生效（无需重启）。重建保留对话 history（agentmain 内部用 oldhistory 接回）。
-
-        纯 bridge 侧实现，不改 agentmain：每次调 agent.load_llm_sessions() 前，把
-        llmcore 的全局 mtime 标志清空（与 _invalidate_mykey_cache 同一手法），使其内部
-        reload_mykeys() 报告 changed=True、从而真正重建——否则刷新模型列表等路径会先
-        消费掉变更标志，常驻 agent 的 load_llm_sessions 会因 changed=False 跳过重建。"""
-        self.ensure_ga_import_path()
-        try:
-            import llmcore
-        except Exception:
-            return
         with self.lock:
-            agents = [s.agent for s in self.sessions.values() if getattr(s, "agent", None) is not None]
-        for agent in agents:
-            fn = getattr(agent, "load_llm_sessions", None)
-            if not callable(fn):
-                continue
-            try:
-                llmcore._mykey_mtime = None   # 让本次 reload_mykeys() 视为“已变更”，触发真正重建
-                fn()
-            except Exception as e:
-                bridge_print(f"[bridge] reload live agent failed: {e}")
+            for sess in self.sessions.values():
+                if sess.agent is not None:
+                    try:
+                        sess.agent.list_llms()
+                        emit_session_state(sess, sess.status)
+                    except Exception as e:
+                        bridge_print(f"[model reload] {sess.id}: {e}")
+        return self.list_model_profiles()
 
     def add_model_profile(self, data: dict) -> dict:
         cfg = self._build_cfg(data)
@@ -775,13 +753,54 @@ class AgentManager:
             agentmain = importlib.import_module("agentmain")
             GA = getattr(agentmain, "GenericAgent")
             agent = GA()
+            if sess.llm_no is not None and sess.llm_no != agent.llm_no:
+                agent.next_llm(int(sess.llm_no))
+            sess.llm_no = agent.llm_no
+            if sess.has_content:
+                from desktop_history import restore_agent
+                meta = restore_agent(agent, self.ga_root, self._session_dict(sess))
+                sess.log_refs = meta["log_refs"]
             agent.inc_out = True
             agent.verbose = True
             threading.Thread(target=agent.run, daemon=True, name=f"GA-{sess.id}").start()
+            sess.agent = agent
+            sess.pending_restore = False
+            self._sync_display_cache(sess)
+            from frontends import hub
+            hub.connect(agent, f"desktop-{sess.id}",
+                        put_task=lambda text: self._hub_command(sess, "put", text),
+                        abort=lambda: self._hub_command(sess, "abort"),
+                        llm=lambda no=None: self._hub_command(sess, "llm", no))
             return agent
         finally:
             with contextlib.suppress(Exception):
                 os.chdir(old_cwd)
+
+    def _hub_command(self, sess: Session, op: str, text=None):
+        """Use the same entrance as Desktop; Hub reads state/output directly from GA."""
+        try:
+            with self.mutation():
+                if self.sessions.get(sess.id) is not sess:
+                    return {"error": "session deleted", "code": "gone"}
+                if op == "put":
+                    if not isinstance(text, str) or not text.strip():
+                        return {"error": "text must be non-empty", "code": "badop"}
+                    if self._session_has_unfinished_work(sess):
+                        return {"error": "session is busy", "code": "busy"}
+                    return self.submit_prompt(sess.id, text)
+                if op == "llm":
+                    agent = sess.agent
+                    if text is None:
+                        return {"cur": agent.llm_no, "items": [n for _, n, _ in agent.list_llms()]}
+                    if self._session_has_unfinished_work(sess):
+                        return {"error": "session is busy", "code": "busy"}
+                    if type(text) is not int or not 0 <= text < len(agent.list_llms()):
+                        return {"error": f"no llm #{text}", "code": "badop"}
+                    self.set_session_model(sess.id, text)
+                    return {"ok": 1, "cur": agent.llm_no}
+                return self.cancel(sess.id)
+        except MaintenanceConflict as exc:
+            return {"error": str(exc), "code": "busy"}
 
     @staticmethod
     def _base_display_name(var: str, cfg: Optional[dict]) -> str:
@@ -824,20 +843,19 @@ class AgentManager:
             cfg = mk.get(k) if isinstance(mk.get(k), dict) else {}
             if "mixin" in k:
                 all_mixin_members.update(str(m) for m in (cfg.get("llm_nos") or []))
-        active = self.config.get("llmNo", 0)
         out = []
         for i, k in enumerate(keys):
             cfg = mk.get(k) if isinstance(mk.get(k), dict) else {}
             if "mixin" in k:
                 members = [str(m) for m in (cfg.get("llm_nos") or [])]
-                out.append({"id": i, "varName": k, "kind": "mixin", "name": "",
-                            "members": members, "active": i == active})
+                out.append({"id": i, "varName": k, "kind": "mixin", "name": str(cfg.get("name") or k),
+                            "members": members})
             else:
                 name = self._base_display_name(k, cfg)
                 out.append({"id": i, "varName": k, "kind": "native", "name": name,
                             "model": cfg.get("model", ""),
                             "group": "native" if "native" in k else "std",
-                            "inMixin": name in all_mixin_members, "active": i == active})
+                            "inMixin": name in all_mixin_members})
         return out
 
     def add_to_mixin(self, profile_id: int) -> dict:
@@ -905,14 +923,14 @@ class AgentManager:
     def _live_model(sess: Session) -> Optional[dict]:
         """该会话 agent 当前真正在用的模型(渠道组会随故障转移变化)。
         agent 还没建(没跑过 turn)时返回静态绑定信息,前端据 llmNo 回显选择器。
-        llmNo: 始终以 sess.llm_no 为权威(用户选择),agent.llm_no 在初始化窗口可能滞后。"""
+        已创建的 agent 是模型选择的唯一来源。"""
         ag = getattr(sess, "agent", None)
         if ag is None:
             return {"current": None, "isMixin": False, "llmNo": sess.llm_no,
                     "runningLlmNo": sess.running_llm_no, "runningModel": sess.running_model}
         try:
             back = ag.llmclient.backend
-            live_no = sess.llm_no if sess.llm_no is not None else getattr(ag, "llm_no", 0)
+            live_no = sess.llm_no = ag.llm_no
             if "Mixin" in type(back).__name__:
                 return {"current": back.current_name, "isMixin": True, "llmNo": live_no,
                         "runningLlmNo": sess.running_llm_no, "runningModel": sess.running_model}
@@ -922,13 +940,46 @@ class AgentManager:
             return {"current": None, "isMixin": False, "llmNo": sess.llm_no,
                     "runningLlmNo": sess.running_llm_no, "runningModel": sess.running_model}
 
+    def _sync_display_cache(self, sess: Session):
+        """Disposable projection. Completed prefixes are reused; GA owns all text."""
+        agent = sess.agent
+        if agent is None or sess.status == "running" or getattr(agent, "is_running", False):
+            return  # stream queue supplies the temporary in-progress overlay
+        tasks = getattr(agent, "all_outputs", None)
+        if tasks is None:
+            return
+        signature = (len(tasks), str(tasks[-1].get("input", "")),
+                     tuple(tasks[-1].get("outputs") or [])) if tasks else (0,)
+        reset = sess.output_cache_source is not tasks or len(tasks) < sess.output_cache_count
+        if not reset and signature == sess.output_cache_signature and (sess.messages or not tasks):
+            return
+        from desktop_history import display_messages
+        start = 0 if reset or not sess.messages else max(0, sess.output_cache_count - 1)
+        offset = 0 if start == 0 else sess.output_cache_tail
+        projected = display_messages(tasks[start:])
+        for i, message in enumerate(projected, offset):
+            # Retain display-only metadata (attachments/timestamps), never cached text.
+            old = sess.messages[i] if i < len(sess.messages) else {}
+            projected[i - offset] = {**old, **message, "id": i + 1,
+                                     "ts": message.get("ts") or old.get("ts")}
+        sess.messages[offset:] = projected
+        sess.msg_seq = len(sess.messages)
+        sess.output_cache_source = tasks
+        sess.output_cache_count = len(tasks)
+        last_size = len(display_messages(tasks[-1:])) if tasks else 0
+        sess.output_cache_tail = len(sess.messages) - last_size
+        sess.output_cache_signature = signature
+
     def snapshot(self, sess: Session, include_messages: bool = True) -> dict:
+        if include_messages:
+            self._sync_display_cache(sess)
         out = {
             "sessionId": sess.id,
             "id": sess.id,
             "title": sess.title,
             "cwd": sess.cwd,
             "status": sess.status,
+            "loaded": not sess.pending_restore,
             "createdAt": sess.created_at,
             "updatedAt": sess.updated_at,
             "lastError": sess.last_error,
@@ -947,6 +998,12 @@ class AgentManager:
         msg = {"id": sess.msg_seq, "role": role, "content": content, "ts": time.time()}
         msg.update(extra)
         sess.messages.append(msg)
+        if role == "user":
+            from desktop_history import preview
+            if not sess.first_message:
+                sess.first_message = preview(content)
+                sess.first_message_at = msg["ts"]
+            sess.has_content = True
         sess.updated_at = time.time()
         if role == "user" and content.strip() and sess.title == "New chat":
             sess.title = content.strip().replace("\n", " ")[:40]
@@ -955,7 +1012,7 @@ class AgentManager:
 
     def create_session(self, cwd: Optional[str] = None) -> Session:
         sid = "sess-" + uuid.uuid4().hex[:12]
-        sess = Session(id=sid, cwd=str(cwd or self.ga_root), llm_no=_global_default_llm_no())
+        sess = Session(id=sid, cwd=str(cwd or self.ga_root))
         with self.mutation():
             self.sessions[sid] = sess
             self.active_session_id = sid
@@ -986,6 +1043,9 @@ class AgentManager:
             if sess.agent and hasattr(sess.agent, "abort"):
                 with contextlib.suppress(Exception):
                     sess.agent.abort()
+            peer = getattr(sess.agent, "_hub", None)
+            if peer:
+                peer.close()
             if self._session_has_unfinished_work(sess):
                 self._retired_sessions[sid] = sess
             emit_session_state(sess, "closed")
@@ -1007,6 +1067,11 @@ class AgentManager:
                 raise web.HTTPNotFound(text=json.dumps({"error": f"session not found: {sid}"}, ensure_ascii=False), content_type="application/json")
             if sess.status == "running":
                 raise web.HTTPConflict(text=json.dumps({"error": "session is already running"}, ensure_ascii=False), content_type="application/json")
+            if sess.agent is None and _e2e_control_token() is None:
+                if sess.pending_restore:
+                    self.restore_context(sid)
+                else:
+                    self.make_agent(sess)
             extra = {}
             if image_ids:
                 extra["image_ids"] = image_ids
@@ -1107,20 +1172,17 @@ class AgentManager:
                 emit_session_state(sess, "idle")
                 return
             if sess.agent is None:
-                sess.agent = self.make_agent(sess)
-                if sess.llm_history:
-                    try:
-                        sess.agent.llmclient.backend.history = sess.llm_history
-                    except Exception:
-                        pass
+                with self.mutation():
+                    self.make_agent(sess)
             agent = sess.agent
-            # 模型取会话绑定 sess.llm_no,未绑定回退全局默认。切换走 set_session_model。
-            no = sess.llm_no if sess.llm_no is not None else _global_default_llm_no()
-            if no is not None and hasattr(agent, "next_llm"):
-                with contextlib.suppress(Exception):
-                    agent.next_llm(int(no))
+            from desktop_history import preview
+            log_path = getattr(agent, "log_path", None)
             with self.lock:
-                sess.running_llm_no = getattr(agent, "llm_no", no)
+                if log_path and not any(r["name"] == Path(log_path).name for r in sess.log_refs):
+                    sess.log_refs.append({"name": Path(log_path).name,
+                                          "started_at": time.time(), "first_message": preview(prompt)})
+                    self._persist_session(sess)
+                sess.running_llm_no = agent.llm_no
                 try:
                     running_backend = agent.llmclient.backend
                     sess.running_model = str(
@@ -1227,8 +1289,6 @@ class AgentManager:
                 if turn_started:
                     msg_extra["executionMs"] = round((time.time() - turn_started) * 1000)
                 self.add_message(sess, "assistant", full, **msg_extra)
-                try: sess.llm_history = json.loads(json.dumps(agent.llmclient.backend.history, ensure_ascii=False, default=str))
-                except Exception: pass
                 sess.running_llm_no = None
                 sess.running_model = None
                 sess.status = "idle"
@@ -1256,6 +1316,7 @@ class AgentManager:
             sess = self.sessions.get(sid)
             if not sess:
                 raise web.HTTPNotFound(text=json.dumps({"error": f"session not found: {sid}"}, ensure_ascii=False), content_type="application/json")
+            self._sync_display_cache(sess)
             msgs = [m for m in sess.messages if int(m.get("id", 0)) > after]
             if limit > 0:
                 msgs = msgs[-limit:]
@@ -1306,59 +1367,46 @@ class AgentManager:
         return {"ok": True, "sessionId": sid}
 
     def restore_context(self, sid: str) -> dict:
-        with self.lock:
+        # Serialize publication with mutations: concurrent clicks cannot create duplicate GAs.
+        with self.mutation():
             sess = self.sessions.get(sid)
             if not sess:
-                raise web.HTTPNotFound(text=json.dumps({"error": f"session not found: {sid}"}, ensure_ascii=False), content_type="application/json")
-            if sess.agent is not None:
-                return {"ok": True, "sessionId": sid, "restored": False, "reason": "agent already alive"}
-        agent = self.make_agent(sess)
-        # 恢复 agent 时按会话绑定 seed 模型(未绑定则全局默认),保持显示/使用一致。
-        no = sess.llm_no if sess.llm_no is not None else _global_default_llm_no()
-        if no is not None and hasattr(agent, "next_llm"):
-            with contextlib.suppress(Exception):
-                agent.next_llm(int(no))
-        if sess.llm_history:
+                raise web.HTTPNotFound(text=json.dumps({"error": f"session not found: {sid}"}), content_type="application/json")
+            if not sess.pending_restore:
+                return {"ok": True, "sessionId": sid, "restored": False, "loaded": True}
             try:
-                agent.llmclient.backend.history = sess.llm_history
-            except Exception as e:
-                bridge_print(f"[bridge] restore llm_history failed: {e}")
-        else:
-            history = []
-            for m in sess.messages:
-                role = m.get("role")
-                content = m.get("content", "")
-                if role == "user":
-                    history.append({"role": "user", "content": [{"type": "text", "text": content}]})
-                elif role == "assistant":
-                    history.append({"role": "assistant", "content": [{"type": "text", "text": content}]})
-            if history:
-                try:
-                    agent.llmclient.backend.history = history
-                except Exception as e:
-                    bridge_print(f"[bridge] inject history failed: {e}")
-        with self.lock:
-            sess.agent = agent
+                self.make_agent(sess)
+            except FileNotFoundError:
+                # No source remains: omit the record, without deleting its metadata file.
+                self.sessions.pop(sid, None)
+                raise web.HTTPNotFound(text=json.dumps({"error": "history source no longer exists"}), content_type="application/json")
+            except Exception as exc:
+                sess.last_error = str(exc)
+                raise web.HTTPInternalServerError(text=json.dumps({"error": str(exc)}), content_type="application/json")
             sess.status = "idle"
-        return {"ok": True, "sessionId": sid, "restored": True, "messageCount": len(sess.llm_history or sess.messages)}
+            sess.last_error = ""
+            self._persist_session(sess)
+            return {"ok": True, "sessionId": sid, "restored": True, "loaded": True,
+                    "messageCount": len(sess.messages)}
 
     def set_session_model(self, sid: str, llm_no: int) -> dict:
         """Bind a model to a session.
 
-        An idle agent switches immediately. A running turn keeps its captured client;
-        the new binding is applied at the start of the next turn.
+        Existing agents own selection; running turns ignore switch requests.
         """
         with self.mutation():
             sess = self.sessions.get(sid)
             if not sess:
                 raise web.HTTPNotFound(text=json.dumps({"error": f"session not found: {sid}"}, ensure_ascii=False), content_type="application/json")
-            sess.llm_no = int(llm_no)
-            if (sess.status != "running" and sess.agent is not None
-                    and hasattr(sess.agent, "next_llm")):
-                with contextlib.suppress(Exception):
+            if sess.status != "running":
+                if sess.agent is None:
+                    sess.llm_no = int(llm_no)
+                else:
                     sess.agent.next_llm(int(llm_no))
+                    sess.llm_no = sess.agent.llm_no
             sess.updated_at = time.time()
             self._persist_session(sess)
+        emit_session_state(sess, "model")
         return {"ok": True, "sessionId": sid, "llmNo": sess.llm_no, "model": self._live_model(sess)}
 
 
@@ -1471,12 +1519,9 @@ def discover_extra_services(ga_root: Path) -> List[dict]:
         out.append({
             "id": "reflect/scheduler.py",
             "cmd": [sys.executable, "agentmain.py", "--reflect", "reflect/scheduler.py"],
+            "shared": True, "singleton_port": 45762,
         })
-    # conductor 跟 scheduler 一样,bridge 启动时自动拉起。--no-browser 是关键:
-    # conductor.py 默认会用 webbrowser.open 在用户浏览器弹一个 8900 端口 UI,
-    # 桌面版自启时不需要这个独立 UI(用户从「指挥家」页直接访问)。
-    # The desktop conductor evolves with this bridge. Keep both package-owned and inject the
-    # external core through GA_ROOT instead of executing arbitrary UI glue from that checkout.
+    # Shared services may be launched, but never owned by the desktop.
     conductor = APP_DIR / "conductor.py"
     if conductor.is_file():
         conductor_port = _configured_conductor_port()
@@ -1489,7 +1534,7 @@ def discover_extra_services(ga_root: Path) -> List[dict]:
                 "--port",
                 str(conductor_port),
             ],
-            "port": conductor_port,
+            "port": conductor_port, "shared": True,
         })
     return out
 
@@ -1502,6 +1547,23 @@ def _port_alive(port: Optional[int]) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.3)
         return s.connect_ex(("127.0.0.1", port)) == 0
+
+
+def _shared_service_alive(svc: dict) -> bool:
+    port = svc.get("singleton_port")
+    if not port:
+        return _port_alive(svc.get("port"))
+    # Scheduler's lock socket never accepts: probing with connect fills its backlog.
+    import errno
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind(("127.0.0.1", port))
+        except OSError as exc:
+            if exc.errno == errno.EADDRINUSE or getattr(exc, "winerror", None) == 10048:
+                return True
+            raise
+    return False
 
 
 def _mem_mb(pid: Optional[int]) -> Optional[int]:
@@ -1619,6 +1681,18 @@ class ServiceManager:
 
     def _state(self, sid: str, *, err: str = "") -> dict:
         proc = self.procs.get(sid)
+        svc = self._catalog.get(sid, {})
+        if svc.get("shared"):
+            running = _shared_service_alive(svc)
+            failed = proc is not None and proc.poll() is not None and not running
+            error = "" if running else err or (f"exit code {proc.returncode}" if failed else "")
+            return {
+                "id": sid, "status": "running" if running else "error" if error else "offline",
+                "running": running, "owned": False, "external": running,
+                "portConflict": False, "port": svc.get("port") or svc.get("singleton_port"),
+                "pid": None, "lastError": error, "errorKey": "",
+                "lastWarning": "", "warningKey": "",
+            }
         owned = proc is not None and proc.poll() is None
         running = owned
         status = "running" if owned else "offline"
@@ -1705,7 +1779,8 @@ class ServiceManager:
         item["name"] = sid
         item["memMb"] = _mem_mb(item.get("pid"))
         item["cpuPct"] = _cpu_pct(item.get("pid"))
-        item["managed"] = True
+        item["managed"] = not self._catalog[sid].get("shared", False)
+        item["canStart"] = True
         return item
 
     def list_panel_state(self) -> List[dict]:
@@ -1740,6 +1815,8 @@ class ServiceManager:
             svc = self._catalog.get(sid)
             if not svc:
                 raise KeyError(sid)
+            if svc.get("shared"):
+                return self._ensure_shared(sid, svc)
             proc = self.procs.get(sid)
             if proc is not None and proc.poll() is None:
                 return {"ok": True, "service": self._managed_state(sid)}
@@ -1781,6 +1858,31 @@ class ServiceManager:
                 return {"ok": False, "error": item["lastError"] or "start_failed", "service": item}
             return {"ok": True, "service": item}
 
+    def _ensure_shared(self, sid: str, svc: dict) -> dict:
+        if not _shared_service_alive(svc):
+            proc = self.procs.get(sid)
+            if proc is None or proc.poll() is not None:
+                kw = dict(cwd=str(self.ga_root), stdin=subprocess.DEVNULL,
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                          env={**os.environ, "GA_ROOT": str(self.ga_root)})
+                if sys.platform == "win32":
+                    kw["creationflags"] = (subprocess.DETACHED_PROCESS |
+                                           subprocess.CREATE_NEW_PROCESS_GROUP)
+                else:
+                    kw["start_new_session"] = True
+                proc = subprocess.Popen(svc["cmd"], **kw)
+                self.procs[sid] = proc  # Observe this launch only; never terminate it.
+            deadline = time.monotonic() + 10
+            while not _shared_service_alive(svc) and time.monotonic() < deadline:
+                if proc.poll() is not None:
+                    break
+                time.sleep(.1)
+        item = self._managed_state(sid)
+        if not item["running"] and not item["lastError"]:
+            item = self._managed_state(sid, err="service not ready")
+        self._emit({"type": "service.changed", "service": item})
+        return {"ok": item["running"], "error": item["lastError"], "service": item}
+
     def autostart_extras(self) -> None:
         """Auto-start non-IM services on bridge boot. Currently:
           - reflect/scheduler.py (drives L4 archive cron every 12h).
@@ -1795,6 +1897,8 @@ class ServiceManager:
 
     def stop_all_extras(self) -> None:
         for sid in sorted(set(self._catalog) - set(self._im_catalog)):
+            if self._catalog[sid].get("shared"):
+                continue
             with contextlib.suppress(Exception):
                 self.stop_service(sid)
 
@@ -1814,11 +1918,9 @@ class ServiceManager:
         return bool(buf) and any("Exception in thread conductor-agent" in ln for ln in buf)
 
     def restart_broken_extras(self) -> None:
-        """mykey 被整体重写(导入密钥/编辑渠道配置)后,只重启「已经坏掉」的
-        conductor/scheduler。健康运行中的进程不动——它们会在下个任务靠自身 mtime
-        热重载新 key,强行重启反而会打断正在跑的任务。"""
+        """Retry failed owned extras after configuration changes; never restart shared services."""
         for sid in sorted(set(self._catalog) - set(self._im_catalog)):
-            if not self._extra_is_broken(sid):
+            if self._catalog[sid].get("shared") or not self._extra_is_broken(sid):
                 continue
             with contextlib.suppress(Exception):
                 self.stop_service(sid)
@@ -1833,6 +1935,8 @@ class ServiceManager:
         with self.lock:
             if sid not in self._catalog:
                 raise KeyError(sid)
+            if self._catalog[sid].get("shared"):
+                return {"ok": False, "error": "not_owned", "service": self._managed_state(sid)}
             self._stopping.add(sid)
             proc = self.procs.get(sid)
             stop_error = ""
@@ -2078,7 +2182,7 @@ async def status_handler(request):
 
 
 _SETTINGS = Path.home() / ".ga_desktop_settings.json"
-_UI_KEYS = ("lang", "theme", "appearance", "plain", "llmNo", "fontSize")
+_UI_KEYS = ("lang", "theme", "appearance", "plain", "fontSize")
 
 
 def _settings_doc() -> dict:
@@ -2091,21 +2195,12 @@ def _update_settings_doc(mutate) -> dict:
 
 def _desktop_ui() -> dict:
     ui = _settings_doc().get("ui")
-    return dict(ui) if isinstance(ui, dict) else {}
+    return {k: ui[k] for k in _UI_KEYS if k in ui} if isinstance(ui, dict) else {}
 
 
 def _conductor_settings() -> dict:
     conductor = _settings_doc().get("conductor")
     return dict(conductor) if isinstance(conductor, dict) else {}
-
-
-def _global_default_llm_no() -> int:
-    """全局默认模型下标。会话未绑定(sess.llm_no is None)时回退到它。"""
-    no = _desktop_ui().get("llmNo")
-    try:
-        return int(no) if no is not None else 0
-    except (TypeError, ValueError):
-        return 0
 
 
 def _parse_model_no(value: Any) -> Optional[int]:
@@ -2121,27 +2216,18 @@ def _resolve_conductor_model_state(doc: dict, profile_count: int) -> dict:
     """Resolve persisted Conductor config without relying on modulo selection."""
     count = max(0, int(profile_count or 0))
     conductor = doc.get("conductor") if isinstance(doc, dict) else None
-    ui = doc.get("ui") if isinstance(doc, dict) else None
     raw_configured = conductor.get("llmNo") if isinstance(conductor, dict) else None
     configured = _parse_model_no(raw_configured)
-    ui_default = _parse_model_no(ui.get("llmNo")) if isinstance(ui, dict) else None
 
     if count <= 0:
         return {"configured": configured, "effective": None, "fallbackReason": "no_models"}
     if configured is not None and 0 <= configured < count:
         return {"configured": configured, "effective": configured, "fallbackReason": None}
-    if ui_default is not None and 0 <= ui_default < count:
-        reason = "invalid_configured" if raw_configured is not None else "ui_default"
-        return {"configured": configured, "effective": ui_default, "fallbackReason": reason}
     return {"configured": configured, "effective": 0, "fallbackReason": "first_available"}
 
 
 async def get_config_handler(request):
-    profiles = manager.list_model_profiles()
-    active = next((p["id"] for p in profiles if p.get("active")), manager.config.get("llmNo", 0))
     cfg = dict(manager.config)
-    if "llmNo" not in cfg:
-        cfg["llmNo"] = active
     cfg.update(_desktop_ui())
     cfg["conductor"] = _conductor_settings()
     return json_ok({"gaRoot": manager.ga_root, "mykeyPath": manager.mykey_path, "config": cfg})
@@ -2164,7 +2250,7 @@ async def save_config_handler(request):
                 except DesktopSettingsError as error:
                     bridge_print(f"[bridge] save ui prefs failed: {error}")
                     return json_ok({"ok": False, "error": str(error)}, status=500)
-            manager.config.update(cfg)
+            manager.config.update({k: v for k, v in cfg.items() if k != "llmNo"})
     return json_ok({"ok": True, "gaRoot": manager.ga_root, "mykeyPath": manager.mykey_path, "config": manager.config})
 
 
@@ -2299,8 +2385,7 @@ async def cancel_handler(request):
 
 async def restore_handler(request):
     sid = request.match_info["sid"]
-    with manager.mutation():
-        return json_ok(manager.restore_context(sid))
+    return json_ok(await asyncio.to_thread(manager.restore_context, sid))
 
 
 async def session_model_handler(request):
@@ -2971,18 +3056,6 @@ def create_app():
     app.router.add_post("/services/bridge/exit", bridge_exit_handler)
     if _e2e_control_token() is not None:
         app.router.add_post("/__e2e__/next-turn", e2e_next_turn_handler)
-
-    # Serve static frontend (desktop/static/)
-    static_dir = APP_DIR / "desktop" / "static"
-
-    async def index_handler(request):
-        return web.FileResponse(
-            static_dir / "index.html",
-            headers={"Cache-Control": "no-cache, no-store, must-revalidate"},
-        )
-
-    app.router.add_get("/", index_handler)
-    app.router.add_static("/", static_dir, show_index=False)
 
     async def on_startup(app):
         hub.loop = asyncio.get_running_loop()

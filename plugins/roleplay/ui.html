@@ -1,0 +1,1401 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>星芒剧场 · 独立剧本工作室</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #f7f9fc 0%, #eef3f9 100%);
+      --card-bg: rgba(255, 255, 255, 0.88);
+      --card-border: rgba(226, 232, 240, 0.8);
+      --text-main: #1e293b;
+      --text-sub: #64748b;
+      --primary: #5a78a6;
+      --primary-hover: #45618b;
+      --primary-light: #eef4fb;
+      --accent: #d97706;
+      --accent-soft: #fef3c7;
+      --tag-green: #ecfdf5;
+      --tag-green-text: #059669;
+      --shadow-sm: 0 2px 8px rgba(100, 116, 139, 0.06);
+      --shadow-md: 0 8px 24px rgba(100, 116, 139, 0.08);
+      --shadow-hover: 0 12px 32px rgba(90, 120, 166, 0.14);
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --radius-sm: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      min-height: 100vh;
+      padding: 32px 20px;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1180px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .header-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      border-radius: 999px;
+      background: var(--primary-light);
+      color: var(--primary);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    h1 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 2.2rem;
+      color: #1e293b;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--text-sub);
+      font-size: 0.95rem;
+    }
+
+    /* Grid Layout */
+    .workspace-grid {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      gap: 28px;
+    }
+    @media (max-width: 900px) {
+      .workspace-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.25s ease, transform 0.25s ease;
+      margin-bottom: 24px;
+    }
+    .card:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .card-title {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #24334a;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .card-title span.desc {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 12px;
+      font-weight: normal;
+      color: var(--text-sub);
+    }
+
+    /* Session List Sidebar */
+    .session-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 480px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+    .session-item {
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .session-item:hover {
+      border-color: var(--primary);
+      background: var(--primary-light);
+    }
+    .session-item.active {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 2px 6px rgba(90, 120, 166, 0.15);
+    }
+    .session-item-title {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #1e293b;
+      margin-bottom: 4px;
+    }
+    .session-item-sub {
+      font-size: 0.8rem;
+      color: var(--text-sub);
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* Form Controls */
+    .form-group {
+      margin-bottom: 18px;
+    }
+    .form-group.two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+    .hint {
+      font-size: 0.78rem;
+      color: #8292a2;
+      margin-top: 4px;
+    }
+    input[type="text"], textarea, select {
+      width: 100%;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid #cbd5e1;
+      background: #ffffff;
+      font-family: inherit;
+      font-size: 0.92rem;
+      color: var(--text-main);
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    input[type="text"]:focus, textarea:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(90, 120, 166, 0.18);
+    }
+    textarea {
+      resize: vertical;
+      min-height: 90px;
+      line-height: 1.5;
+    }
+    textarea.tall {
+      min-height: 120px;
+    }
+
+    /* Buttons */
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    button {
+      padding: 9px 18px;
+      border-radius: var(--radius-md);
+      border: none;
+      font-family: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    button.btn-primary {
+      background: var(--primary);
+      color: white;
+      box-shadow: 0 2px 6px rgba(90, 120, 166, 0.25);
+    }
+    button.btn-primary:hover {
+      background: var(--primary-hover);
+      box-shadow: 0 4px 12px rgba(90, 120, 166, 0.35);
+    }
+    button.btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    button.btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+    }
+    button.btn-accent {
+      background: #059669;
+      color: white;
+    }
+    button.btn-accent:hover {
+      background: #047857;
+    }
+    button.btn-danger {
+      background: #ef4444;
+      color: white;
+    }
+    button.btn-danger:hover {
+      background: #dc2626;
+    }
+
+    /* Model Call Info Card */
+    .api-pill-card {
+      background: linear-gradient(135deg, #f0f7ff 0%, #e8f1fd 100%);
+      border: 1px solid #cce1fa;
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 20px;
+    }
+    .api-pill-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+    .api-pill-row:last-child { margin-bottom: 0; }
+    .code-tag {
+      background: #ffffff;
+      padding: 3px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid #bfdbfe;
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.86rem;
+      color: #1e40af;
+    }
+    .copy-btn {
+      padding: 4px 10px;
+      font-size: 0.78rem;
+      border-radius: var(--radius-sm);
+      background: #fff;
+      border: 1px solid #93c5fd;
+      color: #1d4ed8;
+      cursor: pointer;
+    }
+    .copy-btn:hover { background: #dbeafe; }
+
+    /* Status Badge */
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-active { background: var(--tag-green); color: var(--tag-green-text); }
+    .badge-paused { background: var(--accent-soft); color: var(--accent); }
+
+    /* Console Output */
+    .console-box {
+      background: #1e293b;
+      color: #e2e8f0;
+      padding: 14px;
+      border-radius: var(--radius-md);
+      font-family: ui-monospace, SFMono-Regular, monospace;
+      font-size: 0.82rem;
+      max-height: 180px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.65);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+    .modal-card {
+      background: #fff;
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      max-width: 440px;
+      width: 90%;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border);
+    }
+    .modal-card.wide {
+      width: 920px !important;
+      max-width: 95vw !important;
+      height: 82vh !important;
+      max-height: 820px !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+      padding: 24px 26px !important;
+    }
+    /* NPC Card Styles */
+    .npc-item-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      position: relative;
+    }
+    .npc-item-card:hover {
+      border-color: #cbd5e1;
+      background: #f8fafc;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
+    }
+    .npc-item-card.active {
+      border-color: var(--accent);
+      background: #eff6ff;
+      box-shadow: 0 0 0 1px var(--accent);
+    }
+    .npc-avatar-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e0e7ff, #dbeafe);
+      color: #3b82f6;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      margin-top: 2px;
+    }
+    .npc-item-card.active .npc-avatar-badge {
+      background: var(--accent);
+      color: #ffffff;
+    }
+    .npc-card-body {
+      flex: 1;
+      min-width: 0;
+    }
+    .npc-card-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 2px;
+    }
+    .npc-card-name {
+      font-weight: 600;
+      font-size: 0.88rem;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .npc-card-role-tag {
+      font-size: 0.7rem;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 1px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 110px;
+    }
+    .npc-card-preview {
+      font-size: 0.74rem;
+      color: #64748b;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+    .modal-card h2 {
+      font-family: 'Noto Serif SC', serif;
+      font-size: 1.35rem;
+      color: #1e293b;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .modal-card p {
+      font-size: 0.88rem;
+      color: var(--text-sub);
+      line-height: 1.5;
+      margin-bottom: 16px;
+    }
+
+    .btn-preset {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      background: #ffffff;
+      color: #334155;
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+    .btn-preset:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+    .btn-preset.active {
+      background: var(--primary-light, #eef4fb);
+      border-color: var(--primary, #5a78a6);
+      color: var(--primary, #5a78a6);
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(90, 120, 166, 0.15);
+    }
+
+    /* 移动端与小屏幕自适应 (Responsive Mobile Adaptation) */
+    @media (max-width: 868px) {
+      body {
+        padding: 12px 8px 32px 8px;
+      }
+      .container {
+        padding: 0 4px;
+      }
+      header {
+        margin-bottom: 16px;
+      }
+      header > div {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 12px;
+      }
+      header h1 {
+        font-size: 1.5rem;
+      }
+      header .subtitle {
+        font-size: 0.85rem;
+      }
+      header div[style*="display:flex;gap:10px"] {
+        margin-top: 0 !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px !important;
+      }
+      header div[style*="display:flex;gap:10px"] button {
+        width: 100%;
+        text-align: center;
+        padding: 8px 10px;
+        font-size: 0.82rem !important;
+      }
+      .workspace-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .card {
+        padding: 16px;
+        margin-bottom: 16px;
+        border-radius: var(--radius-md);
+      }
+      .form-group.two-col {
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+      .session-list {
+        max-height: 240px;
+      }
+      .btn-row {
+        gap: 8px;
+      }
+      .btn-row button {
+        flex: 1 1 calc(50% - 8px);
+        min-width: 120px;
+        padding: 10px 12px;
+        font-size: 0.85rem;
+      }
+      input[type="text"], input[type="number"], textarea, select {
+        font-size: 16px !important; /* 防止 iOS 聚焦时自动缩放页面 */
+      }
+      /* 模态弹窗手机端优化 */
+      .modal-card {
+        padding: 18px 14px;
+        width: 95vw !important;
+        max-width: 95vw !important;
+        margin: 10px;
+        border-radius: var(--radius-md);
+      }
+      .modal-card.wide {
+        width: 96vw !important;
+        max-width: 96vw !important;
+        height: 90vh !important;
+        max-height: 90vh !important;
+      }
+      .modal-card.wide > div[style*="display:flex;gap:20px"] {
+        flex-direction: column !important;
+        gap: 12px !important;
+        overflow-y: auto !important;
+      }
+      .modal-card.wide div[style*="width:240px"] {
+        width: 100% !important;
+        border-right: none !important;
+        border-bottom: 1px solid var(--border);
+        padding-right: 0 !important;
+        padding-bottom: 10px;
+        max-height: 180px;
+      }
+      #npcCardsList {
+        flex-direction: row !important;
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding-bottom: 6px;
+      }
+      .npc-item-card {
+        min-width: 200px;
+        max-width: 220px;
+      }
+      .call-box pre {
+        font-size: 0.72rem;
+        word-break: break-all;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <span class="header-badge">✦ 独立剧本与 IF 线沙盒 ✦</span>
+        <h1>星芒剧场 · 剧本工坊</h1>
+        <p class="subtitle">配置沉浸式独立剧本，生成专属 API 模型，一键归档至 MemPalace 记忆宫殿</p>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:10px;">
+        <button class="btn-secondary" style="font-size:0.85rem;" onclick="openNpcModal()">🎭 公共角色库</button>
+        <button class="btn-secondary" style="font-size:0.85rem;" onclick="openKeyModal()">🔑 密钥设置</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="workspace-grid">
+    <!-- Left Sidebar: Session List -->
+    <div>
+      <div class="card">
+        <div class="card-title">
+          <span>剧本列表</span>
+          <button class="btn-secondary" style="padding:4px 8px;font-size:0.75rem;" onclick="loadSessions()">刷新</button>
+        </div>
+        <div class="session-list" id="sessionList">
+          <div style="color:var(--text-sub);font-size:0.85rem;text-align:center;padding:20px;">加载中...</div>
+        </div>
+        <div class="btn-row" style="margin-top:16px;">
+          <button class="btn-primary" style="width:100%;" onclick="createNewDraft()">+ 新建独立剧本</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">系统状态与日志</div>
+        <div class="console-box" id="logConsole">就绪。选择或创建剧本开始体验。</div>
+      </div>
+    </div>
+
+    <!-- Right Main Area: Scenario Editor & Model Integration -->
+    <div>
+      <!-- Model Calling Info Banner -->
+      <div class="card">
+        <div class="card-title">
+          <span>第三方平台接入配置</span>
+          <span class="desc">Chatbox / NextChat / 沉浸式客户端</span>
+        </div>
+        <div class="api-pill-card">
+          <div class="api-pill-row">
+            <span style="font-size:0.85rem;color:#475569;">API 接口地址 (Base URL):</span>
+            <div>
+              <span class="code-tag" id="apiUrlTag">http://127.0.0.1:8876/v1</span>
+              <button class="copy-btn" onclick="copyText('http://127.0.0.1:8876/v1')">复制</button>
+            </div>
+          </div>
+          <div class="api-pill-row">
+            <span style="font-size:0.85rem;color:#475569;">API Key (统一鉴权密钥):</span>
+            <div>
+              <span class="code-tag" id="currentKeyTag" style="letter-spacing:1px;">未设置</span>
+              <button class="copy-btn" onclick="copyCurrentKey()">复制</button>
+            </div>
+          </div>
+          <div class="api-pill-row">
+            <span style="font-size:0.85rem;color:#475569;">专属模型名称 (Model ID):</span>
+            <div>
+              <span class="code-tag" id="modelIdTag">roleplay/slug/session_id</span>
+              <button class="copy-btn" onclick="copyModelId()">复制</button>
+            </div>
+          </div>
+          <div class="api-pill-row" style="margin-top:4px;">
+            <span style="font-size:0.8rem;color:#64748b;">提示：在第三方客户端填入上方 Base URL、统一 Key 与专属模型名称，即可沉浸式演绎。</span>
+          </div>
+        </div>
+
+        <!-- Editor Form -->
+        <div class="form-group two-col">
+          <div>
+            <label>剧本标识 (slug) <span class="hint">仅小写英文字母/数字/下划线</span></label>
+            <input type="text" id="slug" placeholder="例：moon_palace">
+          </div>
+          <div>
+            <label>存档标识 (session_id) <span class="hint">剧本内独立存档号</span></label>
+            <input type="text" id="sid" placeholder="例：save01">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>剧本标题 (Title)</label>
+          <input type="text" id="title" placeholder="例：月宫线 · 广寒深处">
+        </div>
+
+        <div class="form-group two-col">
+          <div>
+            <label>主角称呼 (Char)</label>
+            <input type="text" id="charName" placeholder="主角名称 (例如: 角色名 / 楼主)">
+          </div>
+          <div>
+            <label>参与者称呼 (User)</label>
+            <input type="text" id="userName" placeholder="你的称呼 (例如: 访客 / 旅人 / 层主)">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>核心底座人设 (Core Persona) <span class="hint">角色的外貌、能力、性格底色；剧本外的稳定锚点</span></label>
+          <textarea id="corePersona" placeholder="角色的外貌、能力、性格底色、稳定基准锚点……"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>本剧本人设 (Roleplay Persona) <span class="hint">本剧场专属的服装、身份、角色关系阶段</span></label>
+          <textarea id="roleplayPersona" placeholder="例：本场为专属背景，角色在剧本中的身份、特殊装扮、关系阶段……"></textarea>
+        </div>
+
+        <div class="form-group">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="margin:0;">登场配角与 NPC 勾选 <span class="hint">从公共角色库中勾选参与本场剧本的人物，模型将自动承接演绎</span></label>
+            <button type="button" id="npcBoxToggleBtn" onclick="toggleNpcSelectorCollapse()" style="background:none;border:none;color:var(--primary);cursor:pointer;font-size:0.82rem;font-weight:600;padding:2px 8px;">收起 ▲</button>
+          </div>
+          <div id="npcSelectorBox" style="display:flex;flex-wrap:wrap;gap:8px;padding:12px;background:#f8fafc;border:1px solid var(--border);border-radius:var(--radius-sm);min-height:48px;max-height:160px;overflow-y:auto;transition:max-height 0.25s ease;">
+            <span style="font-size:0.85rem;color:var(--text-sub);">加载公共角色库中...</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>本场专属 / 临时 NPC 补充 <span class="hint">可选：仅在本剧本出场的一次性小龙套或专属配角设定</span></label>
+          <textarea id="npcRoster" placeholder="例：&#10;1. 守门老者：白发老者，严苛古板，常斥责违规者。&#10;2. 助手小童：活泼灵动，暗中协助主角。"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>世界与剧情背景 (World Setting)</label>
+          <textarea id="worldSetting" placeholder="例：上古天庭，月华凝聚之地，常年覆雪飘花……"></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>开场剧情 / 序幕 (Story Opener) <span class="hint">可选，首回合对话前置氛围</span></label>
+          <textarea id="storyOpener" placeholder="例：夜幕降临，风吹过走廊，故事在这里拉开序幕……"></textarea>
+        </div>
+
+        <!-- Action Buttons -->
+        
+        <!-- 上下文记忆与滚动提炼配置 -->
+        <div class="form-group" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <label style="font-weight: 700; color: #1e293b; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
+            <span>🧠 动态上下文记忆模式配置</span>
+            <span class="hint" style="margin: 0; font-size: 0.8rem;">三层金字塔架构：宏观大纲 + 近期梗概 + 近景对白</span>
+          </label>
+          <div style="display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;">
+            <button type="button" class="btn-preset active" id="btnPresetDialogue" onclick="applyPreset('dialogue')">💬 剧本短小对话 (对白8/梗概5/大纲10)</button>
+            <button type="button" class="btn-preset" id="btnPresetNovel" onclick="applyPreset('novel')">📖 长篇小说式 (对白2/梗概3/大纲5)</button>
+            <button type="button" class="btn-preset" id="btnPresetChat" onclick="applyPreset('chat')">💭 普通聊天/论坛 (无总结纯对白15轮)</button>
+            <button type="button" class="btn-preset" id="btnPresetCustom" onclick="applyPreset('custom')">⚙️ 自定义参数</button>
+          </div>
+          <div class="two-col" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600;">保留近景完整对白轮数</label>
+              <input type="number" id="ctxDialogueTurns" min="0" value="8" style="width: 100%;" onchange="onCustomParamChange()">
+              <span class="hint">原汁原味对白交互(数字直接填，无上限)</span>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600;">近期微观梗概保留条数</label>
+              <input type="number" id="ctxSummaryTurns" min="0" value="5" style="width: 100%;" onchange="onCustomParamChange()">
+              <span class="hint">紧承对白的逐步推进(超限滚入宏观大纲)</span>
+            </div>
+            <div>
+              <label style="font-size: 0.85rem; font-weight: 600;">宏观大纲聚合间隔(轮)</label>
+              <input type="number" id="ctxMacroInterval" min="0" value="10" style="width: 100%;" onchange="onCustomParamChange()">
+              <span class="hint">每几轮将前置历程凝炼为宏观大纲(填0彻底关闭)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-primary" onclick="saveSession()">💾 保存 / 更新剧本设定</button>
+          <button class="btn-accent" onclick="archiveToMemPalace()">🏛️ 归档至 MemPalace 记忆宫殿</button>
+          <button class="btn-secondary" onclick="toggleStatus()">⏸️ 暂停 / 激活状态</button>
+          <button class="btn-danger" onclick="deleteCurrentSession()">🗑️ 删除剧本</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NPC Management Modal -->
+<div class="modal-overlay" id="npcModal" style="display:none;">
+  <div class="modal-card wide">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-shrink:0;">
+      <h2 style="margin:0;">🎭 公共 NPC 角色库</h2>
+      <button class="btn-secondary" style="padding:4px 10px;font-size:0.8rem;" onclick="closeNpcModal()">✕ 关闭</button>
+    </div>
+    <p style="margin-bottom:14px;flex-shrink:0;">维护可在所有剧本中复用的配角与人物设定。剧本编辑时直接勾选即可加入演绎。</p>
+
+    <div style="display:flex;gap:20px;flex:1;min-height:0;overflow:hidden;">
+      <!-- Left: Existing NPC List (Fixed 240px width, independent scroll) -->
+      <div style="width:240px;flex-shrink:0;border-right:1px solid var(--border);padding-right:14px;display:flex;flex-direction:column;overflow:hidden;">
+        <div style="font-weight:600;font-size:0.9rem;margin-bottom:8px;color:#1e293b;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
+          <span>已有人物 (<span id="npcCountTag">0</span>)</span>
+          <button class="btn-secondary" style="padding:2px 8px;font-size:0.75rem;" onclick="clearNpcForm()">+ 新增</button>
+        </div>
+        <div id="npcCardsList" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding-right:4px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Right: NPC Editor Form (Fills remaining width, dedicated scroll) -->
+      <div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding-right:6px;">
+        <div style="font-weight:600;font-size:1rem;margin-bottom:12px;color:#1e293b;" id="npcFormTitle">新增人物设定</div>
+        <input type="hidden" id="editingNpcId" value="">
+        
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <label>人物姓名 *</label>
+            <input type="text" id="mNpcName" placeholder="例如：陶桃 / 邱诺亚">
+          </div>
+          <div class="form-group" style="margin-bottom:0;">
+            <label>身份 / 阵营角色</label>
+            <input type="text" id="mNpcRole" placeholder="例如：临空市猎人协会数据分析组 / Philo花店老板">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>外貌性格与核心设定</label>
+          <textarea id="mNpcPersona" style="min-height:100px;" placeholder="外貌特征、行事准则、与主角/玩家的人物关系……"></textarea>
+        </div>
+        <div class="form-group" style="margin-bottom:12px;">
+          <label>语言台词风格 / 互动禁忌</label>
+          <textarea id="mNpcStyle" style="min-height:80px;" placeholder="说话口吻、常用口头禅、特殊语气（例如元气八卦、沉稳从容）……"></textarea>
+        </div>
+        <div class="btn-row" style="margin-top:auto;padding-top:10px;">
+          <button class="btn-primary" style="flex:1;" onclick="saveNpcRecord()">保存人物</button>
+          <button class="btn-danger" id="delNpcBtn" style="display:none;padding:6px 14px;" onclick="deleteNpcRecord()">删除人物</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Key Setup / Input Modal -->
+<div class="modal-overlay" id="keyModal" style="display:none;">
+  <div class="modal-card">
+    <h2 id="modalTitle">🔑 设置统一 API Key</h2>
+    <p id="modalDesc">首次使用星芒剧场，请设置统一鉴权密钥（用于小剧场网页管理与第三方模型接入验证）。</p>
+    <div class="form-group">
+      <input type="text" id="keyInput" placeholder="输入密钥，例如：sk-star-roleplay-123456" style="font-family:monospace;font-size:0.95rem;">
+    </div>
+    <div class="btn-row" style="margin-top:20px;justify-content:flex-end;">
+      <button class="btn-secondary" id="cancelKeyBtn" onclick="closeKeyModal()" style="display:none;">取消</button>
+      <button class="btn-primary" onclick="submitKey()">确认保存</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+
+  // Context Preset Management
+  let currentPresetMode = 'dialogue';
+
+  window.applyPreset = function(mode) {
+    currentPresetMode = mode;
+    const btnD = $('btnPresetDialogue');
+    const btnN = $('btnPresetNovel');
+    const btnChat = $('btnPresetChat');
+    const btnC = $('btnPresetCustom');
+    if (btnD) btnD.classList.remove('active');
+    if (btnN) btnN.classList.remove('active');
+    if (btnChat) btnChat.classList.remove('active');
+    if (btnC) btnC.classList.remove('active');
+
+    if (mode === 'dialogue') {
+      if (btnD) btnD.classList.add('active');
+      const d = $('ctxDialogueTurns');
+      const s = $('ctxSummaryTurns');
+      const m = $('ctxMacroInterval');
+      if (d) d.value = 8;
+      if (s) s.value = 5;
+      if (m) m.value = 10;
+      log('已切换至预设：💬 短小对话式 (对白8轮 / 梗概5轮 / 大纲10轮)');
+    } else if (mode === 'novel') {
+      if (btnN) btnN.classList.add('active');
+      const d = $('ctxDialogueTurns');
+      const s = $('ctxSummaryTurns');
+      const m = $('ctxMacroInterval');
+      if (d) d.value = 2;
+      if (s) s.value = 3;
+      if (m) m.value = 5;
+      log('已切换至预设：📖 长篇小说式 (对白2轮 / 梗概3轮 / 大纲5轮)');
+    } else if (mode === 'chat') {
+      if (btnChat) btnChat.classList.add('active');
+      const d = $('ctxDialogueTurns');
+      const s = $('ctxSummaryTurns');
+      const m = $('ctxMacroInterval');
+      if (d) d.value = 15;
+      if (s) s.value = 0;
+      if (m) m.value = 0;
+      log('已切换至预设：💭 普通聊天/论坛 (无总结纯对白15轮)');
+    } else {
+      if (btnC) btnC.classList.add('active');
+      log('已切换至预设：⚙️ 自定义参数');
+    }
+  };
+
+  window.onCustomParamChange = function() {
+    const d = parseInt($('ctxDialogueTurns').value, 10);
+    const s = parseInt($('ctxSummaryTurns').value, 10);
+    const m = parseInt($('ctxMacroInterval').value, 10);
+
+    const btnD = $('btnPresetDialogue');
+    const btnN = $('btnPresetNovel');
+    const btnChat = $('btnPresetChat');
+    const btnC = $('btnPresetCustom');
+    if (btnD) btnD.classList.remove('active');
+    if (btnN) btnN.classList.remove('active');
+    if (btnChat) btnChat.classList.remove('active');
+    if (btnC) btnC.classList.remove('active');
+
+    if (d === 8 && s === 5 && m === 10) {
+      if (btnD) btnD.classList.add('active');
+    } else if (d === 2 && s === 3 && m === 5) {
+      if (btnN) btnN.classList.add('active');
+    } else if (d === 15 && s === 0 && m === 0) {
+      if (btnChat) btnChat.classList.add('active');
+    } else {
+      if (btnC) btnC.classList.add('active');
+    }
+    if (btnC) btnC.classList.remove('active');
+
+    if (d === 8 && s === 5 && m === 10) {
+      currentPresetMode = 'dialogue';
+      if (btnD) btnD.classList.add('active');
+    } else if (d === 2 && s === 3 && m === 5) {
+      currentPresetMode = 'novel';
+      if (btnN) btnN.classList.add('active');
+    } else {
+      currentPresetMode = 'custom';
+      if (btnC) btnC.classList.add('active');
+    }
+  };
+
+  let currentSessions = [];
+  let activeKey = '';
+  let cachedApiKey = localStorage.getItem('roleplay_api_key') || '';
+
+  function log(msg) {
+    const box = $('logConsole');
+    const time = new Date().toLocaleTimeString();
+    box.textContent = `[${time}] ${msg}\n` + box.textContent;
+  }
+
+  async function api(path, method = 'GET', data = null) {
+    const headers = { 'Content-Type': 'application/json' };
+    if (cachedApiKey) {
+      headers['Authorization'] = `Bearer ${cachedApiKey}`;
+    }
+    const opts = { method, headers };
+    if (data) opts.body = JSON.stringify(data);
+    const res = await fetch(path, opts);
+    const json = await res.json();
+    if (!res.ok) {
+      if (res.status === 401) {
+        promptKeyInput('鉴权失败：密钥错误或未提供，请重新输入 API Key');
+      }
+      throw new Error(json.error?.message || '请求失败');
+    }
+    return json;
+  }
+
+  async function loadSessions() {
+    try {
+      const res = await api('/roleplay/sessions');
+      currentSessions = Array.isArray(res) ? res : (res.sessions || []);
+      renderSessionList();
+      log(`已加载 ${currentSessions.length} 个剧本存档`);
+    } catch (e) {
+      log(`加载剧本列表失败: ${e.message}`);
+    }
+  }
+
+  function renderSessionList() {
+    const list = $('sessionList');
+    if (!currentSessions.length) {
+      list.innerHTML = '<div style="color:var(--text-sub);font-size:0.85rem;text-align:center;padding:20px;">暂无剧本，点击下方创建</div>';
+      return;
+    }
+    list.innerHTML = currentSessions.map(s => {
+      const isActive = s.key === activeKey ? 'active' : '';
+      const badge = s.status === 'paused' ? '<span class="badge badge-paused">已暂停</span>' : '<span class="badge badge-active">活跃</span>';
+      return `
+        <div class="session-item ${isActive}" onclick="selectSession('${s.slug}', '${s.session_id}')">
+          <div class="session-item-title">${escapeHtml(s.title || s.slug)}</div>
+          <div class="session-item-sub">
+            <span>${s.slug}/${s.session_id}</span>
+            ${badge}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function selectSession(slug, sid) {
+    activeKey = `roleplay:${slug}:${sid}`;
+    renderSessionList();
+    try {
+      const s = await api(`/roleplay/sessions/${slug}/${sid}`);
+      $('slug').value = s.slug;
+      $('sid').value = s.session_id;
+      $('slug').disabled = true;
+      $('sid').disabled = true;
+      $('title').value = s.title || '';
+      
+      const c = s.canon || {};
+      $('corePersona').value = c.core_persona || '';
+      $('roleplayPersona').value = c.roleplay_persona || '';
+      $('npcRoster').value = c.npc_roster || '';
+      $('worldSetting').value = c.world_setting || '';
+      $('storyOpener').value = c.story || '';
+      
+      const ctx = c.context_config || {};
+      const dVal = (ctx.dialogue_turns !== undefined) ? ctx.dialogue_turns : 8;
+      const sVal = (ctx.summary_turns !== undefined) ? ctx.summary_turns : 5;
+      const mVal = (ctx.macro_interval !== undefined) ? ctx.macro_interval : 10;
+      $('ctxDialogueTurns').value = dVal;
+      $('ctxSummaryTurns').value = sVal;
+      $('ctxMacroInterval').value = mVal;
+      if (dVal === 8 && sVal === 5 && mVal === 10) {
+        applyPreset('dialogue');
+      } else if (dVal === 2 && sVal === 3 && mVal === 5) {
+        applyPreset('novel');
+      } else {
+        applyPreset('custom');
+      }
+
+      const selNpcIds = new Set(c.selected_npc_ids || []);
+      document.querySelectorAll('#npcSelectorBox input[type="checkbox"]').forEach(cb => {
+        cb.checked = selNpcIds.has(cb.value);
+      });
+      
+      const vars = c.variables || {};
+      $('charName').value = vars.char || '';
+      $('userName').value = vars.user || '';
+
+      $('modelIdTag').textContent = s.model_id;
+      log(`已载入剧本: 《${s.title}》 (${s.model_id})`);
+    } catch (e) {
+      log(`载入剧本失败: ${e.message}`);
+    }
+  }
+
+  function createNewDraft() {
+    activeKey = '';
+    renderSessionList();
+    $('slug').disabled = false;
+    $('sid').disabled = false;
+    $('slug').value = '';
+    $('sid').value = 'save01';
+    $('title').value = '';
+    $('corePersona').value = '';
+    $('roleplayPersona').value = '';
+    $('npcRoster').value = '';
+    $('worldSetting').value = '';
+    $('storyOpener').value = '';
+    applyPreset('dialogue');
+    $('charName').value = '';
+    $('userName').value = '';
+    document.querySelectorAll('#npcSelectorBox input[type="checkbox"]').forEach(cb => cb.checked = false);
+    $('modelIdTag').textContent = 'roleplay/<slug>/<session_id>';
+    log('已切换至新建草稿模式，请填写剧本信息后保存。');
+  }
+
+  async function saveSession() {
+    const slug = $('slug').value.trim();
+    const sid = $('sid').value.trim();
+    const title = $('title').value.trim();
+    if (!slug || !sid) {
+      alert('请填写 slug 和 session_id');
+      return;
+    }
+    const selected_npc_ids = Array.from(document.querySelectorAll('#npcSelectorBox input[type="checkbox"]:checked')).map(cb => cb.value);
+
+    const canon = {
+      title: title || `${slug}/${sid}`,
+      core_persona: $('corePersona').value,
+      roleplay_persona: $('roleplayPersona').value,
+      selected_npc_ids: selected_npc_ids,
+      npc_roster: $('npcRoster').value,
+      world_setting: $('worldSetting').value,
+      story: $('storyOpener').value,
+      variables: {
+        char: $('charName').value.trim() || 'Character',
+        user: $('userName').value.trim() || 'User'
+      },
+      context_config: {
+        mode: currentPresetMode,
+        dialogue_turns: parseInt($('ctxDialogueTurns').value, 10) || 8,
+        summary_turns: parseInt($('ctxSummaryTurns').value, 10) || 5,
+        macro_interval: parseInt($('ctxMacroInterval').value, 10) || 10
+      }
+    };
+
+    try {
+      if ($('slug').disabled) {
+        // Update existing
+        await api(`/roleplay/sessions/${slug}/${sid}/settings`, 'POST', { canon });
+        log(`剧本《${title}》设定已成功更新！`);
+      } else {
+        // Create new
+        await api('/roleplay/sessions', 'POST', { slug, session_id: sid, title, canon });
+        log(`新剧本《${title}》创建成功！`);
+      }
+      await loadSessions();
+      await selectSession(slug, sid);
+    } catch (e) {
+      log(`保存失败: ${e.message}`);
+      alert(`保存失败: ${e.message}`);
+    }
+  }
+
+  async function archiveToMemPalace() {
+    const slug = $('slug').value.trim();
+    const sid = $('sid').value.trim();
+    if (!slug || !sid || !$('slug').disabled) {
+      alert('请先选择或保存一个有效剧本');
+      return;
+    }
+    try {
+      log(`正在将《${$('title').value}》归档到 MemPalace 记忆宫殿 (wing_roleplay)...`);
+      const res = await api(`/roleplay/sessions/${slug}/${sid}/archive-mempalace`, 'POST', {});
+      log(`🎉 归档成功！已写入 ${res.wing}/${res.room}，并在知识图谱中创建虚构演绎三元组。`);
+      alert(`剧本《${$('title').value}》已成功归档到 MemPalace！\n角色日常对话已知晓此剧本，且绝不混淆日常记忆。`);
+    } catch (e) {
+      log(`归档失败: ${e.message}`);
+      alert(`归档失败: ${e.message}`);
+    }
+  }
+
+  async function toggleStatus() {
+    const slug = $('slug').value.trim();
+    const sid = $('sid').value.trim();
+    if (!slug || !sid) return;
+    try {
+      const s = await api(`/roleplay/sessions/${slug}/${sid}`);
+      const next = s.status === 'paused' ? 'active' : 'paused';
+      await api(`/roleplay/sessions/${slug}/${sid}/status`, 'POST', { status: next });
+      log(`剧本状态已更新为: ${next === 'paused' ? '暂停' : '活跃'}`);
+      await loadSessions();
+    } catch (e) {
+      log(`更新状态失败: ${e.message}`);
+    }
+  }
+
+  async function deleteCurrentSession() {
+    const slug = $('slug').value.trim();
+    const sid = $('sid').value.trim();
+    if (!slug || !sid || !confirm(`确定彻底删除剧本 ${slug}/${sid} 吗？`)) return;
+    try {
+      await api(`/roleplay/sessions/${slug}/${sid}`, 'DELETE');
+      log(`剧本 ${slug}/${sid} 已删除`);
+      createNewDraft();
+      await loadSessions();
+    } catch (e) {
+      log(`删除失败: ${e.message}`);
+    }
+  }
+
+  function copyText(text) {
+    navigator.clipboard.writeText(text).then(() => alert('已复制到剪贴板: ' + text));
+  }
+
+  function copyModelId() {
+    const mid = $('modelIdTag').textContent;
+    if (mid.includes('<')) {
+      alert('请先在下方填写并保存剧本，生成专属模型名称！');
+      return;
+    }
+    copyText(mid);
+  }
+
+  function escapeHtml(str) {
+    return (str || '').replace(/[&<>"']/g, m => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[m]));
+  }
+
+  // NPC Library Management
+  let globalNpcs = [];
+
+  function openNpcModal() {
+    $('npcModal').style.display = 'flex';
+    loadNpcs();
+  }
+
+  function closeNpcModal() {
+    $('npcModal').style.display = 'none';
+  }
+
+  function clearNpcForm() {
+    $('editingNpcId').value = '';
+    $('mNpcName').value = '';
+    $('mNpcRole').value = '';
+    $('mNpcPersona').value = '';
+    $('mNpcStyle').value = '';
+    $('npcFormTitle').textContent = '新增人物设定';
+    $('delNpcBtn').style.display = 'none';
+  }
+
+  function editNpcRecord(npc) {
+    $('editingNpcId').value = npc.id;
+    $('mNpcName').value = npc.name || '';
+    $('mNpcRole').value = npc.role || '';
+    $('mNpcPersona').value = npc.persona || '';
+    $('mNpcStyle').value = npc.style || '';
+    $('npcFormTitle').textContent = `编辑人物: ${npc.name}`;
+    $('delNpcBtn').style.display = 'inline-block';
+  }
+
+  async function loadNpcs() {
+    try {
+      const res = await api('/roleplay/npcs');
+      globalNpcs = res.npcs || [];
+      renderNpcCards();
+      renderNpcCheckboxes();
+    } catch (e) {
+      log('加载公共人物库失败: ' + e.message);
+    }
+  }
+
+  function renderNpcCards() {
+    const list = $('npcCardsList');
+    $('npcCountTag').textContent = globalNpcs.length;
+    if (!globalNpcs.length) {
+      list.innerHTML = '<div style="font-size:0.8rem;color:var(--text-sub);padding:10px;text-align:center;">暂无人物，请在右侧录入</div>';
+      return;
+    }
+    list.innerHTML = globalNpcs.map(n => `
+      <div class="npc-item-card" style="background:#f8fafc;border:1px solid var(--border);border-radius:6px;padding:8px 10px;cursor:pointer;transition:all 0.15s;flex-shrink:0;" onclick='editNpcRecord(${JSON.stringify(n).replace(/'/g, "&apos;")})'>
+        <div style="font-weight:600;font-size:0.85rem;color:#0f172a;display:flex;justify-content:space-between;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;">
+          <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;max-width:110px;">${n.name}</span>
+          <span style="font-size:0.75rem;color:var(--accent);font-weight:normal;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;">${n.role || '无身份'}</span>
+        </div>
+        <div style="font-size:0.75rem;color:#64748b;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+          ${n.persona || '(无详细设定)'}
+        </div>
+      </div>
+    `).join('');
+  }
+
+  let isNpcSelectorCollapsed = false;
+  window.toggleNpcSelectorCollapse = function() {
+    isNpcSelectorCollapsed = !isNpcSelectorCollapsed;
+    const box = $('npcSelectorBox');
+    const btn = $('npcBoxToggleBtn');
+    if (isNpcSelectorCollapsed) {
+      box.style.display = 'none';
+      if (btn) btn.textContent = '展开 ▼';
+    } else {
+      box.style.display = 'flex';
+      if (btn) btn.textContent = '收起 ▲';
+    }
+  };
+
+  function renderNpcCheckboxes() {
+    const box = $('npcSelectorBox');
+    if (!globalNpcs.length) {
+      box.innerHTML = '<span style="font-size:0.85rem;color:var(--text-sub);">公共库暂无人物，可点击上方【🎭 公共角色库】添加常用配角。</span>';
+      return;
+    }
+    const currentChecked = new Set(Array.from(document.querySelectorAll('#npcSelectorBox input[type="checkbox"]:checked')).map(cb => cb.value));
+    box.innerHTML = globalNpcs.map(n => `
+      <label style="display:inline-flex;align-items:center;gap:6px;background:#ffffff;border:1px solid #cbd5e1;padding:4px 10px;border-radius:16px;font-size:0.82rem;cursor:pointer;user-select:none;white-space:nowrap;flex-shrink:0;max-width:100%;box-sizing:border-box;">
+        <input type="checkbox" value="${n.id}" ${currentChecked.has(n.id) ? 'checked' : ''} style="margin:0;cursor:pointer;flex-shrink:0;">
+        <span style="font-weight:600;color:#1e293b;white-space:nowrap;">${n.name}</span>
+        ${n.role ? `<span style="font-size:0.72rem;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;">(${n.role})</span>` : ''}
+      </label>
+    `).join('');
+  }
+
+  async function saveNpcRecord() {
+    const id = $('editingNpcId').value.trim();
+    const name = $('mNpcName').value.trim();
+    const role = $('mNpcRole').value.trim();
+    const persona = $('mNpcPersona').value.trim();
+    const style = $('mNpcStyle').value.trim();
+    if (!name) {
+      alert('请填写人物姓名');
+      return;
+    }
+    try {
+      await api('/roleplay/npcs', 'POST', { id, name, role, persona, style });
+      log(`人物《${name}》已保存到公共库！`);
+      clearNpcForm();
+      await loadNpcs();
+    } catch (e) {
+      alert('保存人物失败: ' + e.message);
+    }
+  }
+
+  async function deleteNpcRecord() {
+    const id = $('editingNpcId').value.trim();
+    const name = $('mNpcName').value.trim();
+    if (!id || !confirm(`确认从公共角色库彻底删除人物《${name}》吗？`)) return;
+    try {
+      await api(`/roleplay/npcs/${id}`, 'DELETE');
+      log(`人物《${name}》已从公共角色库删除。`);
+      clearNpcForm();
+      await loadNpcs();
+    } catch (e) {
+      alert('删除人物失败: ' + e.message);
+    }
+  }
+
+  // Key Modal Management
+  let keyModalMode = 'input'; // 'setup', 'update', 'input'
+
+  function openKeyModal(mode = 'update') {
+    keyModalMode = mode;
+    const modal = $('keyModal');
+    const title = $('modalTitle');
+    const desc = $('modalDesc');
+    const input = $('keyInput');
+    const cancelBtn = $('cancelKeyBtn');
+
+    if (mode === 'setup') {
+      title.textContent = '🔑 初始化统一 API Key';
+      desc.textContent = '系统检测到服务端尚未设置 Key。请为星芒剧场设置一个专属密钥（网页管理与第三方接入均复用此 Key）：';
+      cancelBtn.style.display = 'none';
+      input.value = '';
+    } else if (mode === 'update') {
+      title.textContent = '🔑 查看 / 修改统一 API Key';
+      desc.textContent = '修改后将同步更新服务端配置与本地存储。第三方接入时请同步更新：';
+      cancelBtn.style.display = 'inline-block';
+      input.value = cachedApiKey;
+    } else { // 'input'
+      title.textContent = '🔑 请输入 API Key';
+      desc.textContent = '服务端已配置鉴权密钥，请输入 Key 验证进入：';
+      cancelBtn.style.display = 'none';
+      input.value = cachedApiKey;
+    }
+    modal.style.display = 'flex';
+    input.focus();
+  }
+
+  function promptKeyInput(msg) {
+    openKeyModal('input');
+    if (msg) log(msg);
+  }
+
+  function closeKeyModal() {
+    $('keyModal').style.display = 'none';
+  }
+
+  async function submitKey() {
+    const key = $('keyInput').value.trim();
+    if (!key) {
+      alert('Key 不能为空！');
+      return;
+    }
+
+    try {
+      if (keyModalMode === 'setup') {
+        const res = await fetch('/api/auth/setup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error?.message || '设置失败');
+        cachedApiKey = key;
+        localStorage.setItem('roleplay_api_key', key);
+        $('currentKeyTag').textContent = key;
+        closeKeyModal();
+        log('统一 API Key 初始化成功！');
+        await loadSessions();
+      } else if (keyModalMode === 'update') {
+        const res = await api('/api/auth/update', 'POST', { key });
+        cachedApiKey = key;
+        localStorage.setItem('roleplay_api_key', key);
+        $('currentKeyTag').textContent = key;
+        closeKeyModal();
+        log('统一 API Key 修改成功！');
+      } else { // 'input'
+        cachedApiKey = key;
+        localStorage.setItem('roleplay_api_key', key);
+        $('currentKeyTag').textContent = key;
+        // Test auth with a ping
+        try {
+          await api('/roleplay/sessions');
+          closeKeyModal();
+          log('API Key 验证成功！');
+          await loadSessions();
+          await loadNpcs();
+        } catch (e) {
+          alert('Key 验证失败，请确认输入的 Key 是否正确！');
+        }
+      }
+    } catch (e) {
+      alert('操作失败: ' + e.message);
+    }
+  }
+
+  async function initAuthCheck() {
+    try {
+      const res = await fetch('/api/auth/status');
+      const data = await res.json();
+      const hasKey = !!(data.has_key || data.configured);
+      if (!hasKey) {
+        openKeyModal('setup');
+      } else {
+        if (!cachedApiKey) {
+          openKeyModal('input');
+        } else {
+          $('currentKeyTag').textContent = cachedApiKey;
+          await loadSessions();
+          await loadNpcs();
+        }
+      }
+    } catch (e) {
+      log('获取系统鉴权状态失败: ' + e.message);
+    }
+  }
+
+  
+
+// Init
+  initAuthCheck();
+  if (!$('slug').value) createNewDraft();
+</script>
+
+</body>
+</html>
