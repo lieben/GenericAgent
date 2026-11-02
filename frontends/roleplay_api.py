@@ -136,6 +136,7 @@ def bearer_token(header: str) -> str:
 
 
 class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     server_version = "GARoleplay/1.0"
 
     def log_message(self, fmt, *args):
@@ -208,6 +209,9 @@ class Handler(BaseHTTPRequestHandler):
             path = urlparse(self.path).path
             if path in ("/", "/index.html"):
                 self.send_bytes(200, UI.read_bytes(), "text/html; charset=utf-8")
+                return
+            if path == "/favicon.ico":
+                self.send_bytes(204, b"", "image/x-icon")
                 return
             if path == "/api/auth/status":
                 configured = bool(get_configured_key())
@@ -362,69 +366,29 @@ class Handler(BaseHTTPRequestHandler):
                     hb_thread.start()
                     try:
                         for piece in engine.generate(slug, sid, text, extra_system=extra_system):
-                            write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]})
+                            step = 12
+                            for i in range(0, len(piece), step):
+                                sub = piece[i:i+step]
+                                write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": sub}, "finish_reason": None}]})
                     finally:
                         stop_heartbeat.set()
                         hb_thread.join(timeout=1.0)
                     self.finish_sse_chat(data["model"], chunk_id, created, write)
                     return
                 if not data.get("stream"):
-                    # 非流式客户端：使用 Transfer-Encoding: chunked 分块传输 + 空格保活，避免 Cloudflare 524
-                    self.send_response(200)
-                    self.send_header("Content-Type", "application/json; charset=utf-8")
-                    self.send_header("Transfer-Encoding", "chunked")
-                    self.send_header("Connection", "keep-alive")
-                    self.send_header("Access-Control-Allow-Origin", "*")
-                    self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-                    self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-                    self.end_headers()
-
-                    # 立即发送一个保活换行/空格块，让网关建立首字节
-                    self.wfile.write(b"1\r\n \r\n")
-                    self.wfile.flush()
-
-                    result_box = []
-                    stop_hb = threading.Event()
-
-                    def worker():
-                        try:
-                            ans = engine.chat(slug, sid, text, extra_system=extra_system)
-                            result_box.append(ans)
-                        except Exception as e:
-                            result_box.append(e)
-
-                    th = threading.Thread(target=worker, daemon=True)
-                    th.start()
-
-                    while not stop_hb.wait(timeout=10.0):
-                        if not th.is_alive():
-                            break
-                        try:
-                            # 客户端若在等 JSON，前置空白字符在 JSON 标准中是被完全忽略的
-                            self.wfile.write(b"1\r\n \r\n")
-                            self.wfile.flush()
-                        except Exception:
-                            break
-
-                    th.join()
-                    if not result_box:
-                        raise RuntimeError("Generation failed or timed out")
-                    res = result_box[0]
-                    if isinstance(res, Exception):
-                        raise res
-
-                    resp_data = json.dumps({
+                    ans = engine.chat(slug, sid, text, extra_system=extra_system)
+                    self.send_json(200, {
                         "id": "chatcmpl-roleplay",
                         "object": "chat.completion",
+                        "created": int(time.time()),
                         "model": data["model"],
-                        "choices": [{"index": 0, "message": {"role": "assistant", "content": res}, "finish_reason": "stop"}],
-                        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-                    }, ensure_ascii=False).encode("utf-8")
-
-                    hex_len = f"{len(resp_data):X}\r\n".encode("ascii")
-                    self.wfile.write(hex_len + resp_data + b"\r\n")
-                    self.wfile.write(b"0\r\n\r\n")
-                    self.wfile.flush()
+                        "choices": [{
+                            "index": 0,
+                            "message": {"role": "assistant", "content": ans},
+                            "finish_reason": "stop"
+                        }],
+                        "usage": {"prompt_tokens": 0, "completion_tokens": len(ans), "total_tokens": len(ans)}
+                    })
                     return
             match = re.fullmatch(r"/roleplay/sessions/([^/]+)/([^/]+)/(chat|status|settings|bridge|checkpoint|undo-last-turn)", path)
             if not match:
