@@ -171,6 +171,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
         self.send_header("Cache-Control", "no-cache")
         self.send_header("Connection", "keep-alive")
+        self.send_header("X-Accel-Buffering", "no")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -355,7 +356,7 @@ class Handler(BaseHTTPRequestHandler):
                     stop_heartbeat = threading.Event()
 
                     def heartbeat_worker():
-                        while not stop_heartbeat.wait(timeout=10.0):
+                        while not stop_heartbeat.wait(timeout=5.0):
                             try:
                                 self.wfile.write(b": keepalive\n\n")
                                 self.wfile.flush()
@@ -366,10 +367,10 @@ class Handler(BaseHTTPRequestHandler):
                     hb_thread.start()
                     try:
                         for piece in engine.generate(slug, sid, text, extra_system=extra_system):
-                            step = 12
-                            for i in range(0, len(piece), step):
-                                sub = piece[i:i+step]
-                                write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": sub}, "finish_reason": None}]})
+                            if piece:
+                                write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]})
+                    except Exception as exc:
+                        print(f"[roleplay-api] streaming error: {exc}")
                     finally:
                         stop_heartbeat.set()
                         hb_thread.join(timeout=1.0)

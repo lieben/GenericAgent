@@ -126,6 +126,7 @@ def generate(slug: str, session_id: str, text: str, extra_system: str = ""):
             q = agent.put_task(text, source=key)
             raw_result = ""
             visible_result = ""
+            sent_visible = ""
             while True:
                 try:
                     item = q.get(timeout=1800)
@@ -133,11 +134,22 @@ def generate(slug: str, session_id: str, text: str, extra_system: str = ""):
                     raise TimeoutError("roleplay generation timeout") from exc
                 if "next" in item:
                     raw_result += str(item.get("next", ""))
+                    cur_visible = _visible_text(raw_result)
+                    if cur_visible and cur_visible.startswith(sent_visible) and len(cur_visible) > len(sent_visible):
+                        delta = cur_visible[len(sent_visible):]
+                        sent_visible = cur_visible
+                        yield delta
                     continue
                 if "done" in item:
                     raw_result = str(item.get("done", "")) or raw_result
                     visible_result = _visible_text(raw_result)
-                    if visible_result:
+                    if visible_result and len(visible_result) > len(sent_visible):
+                        if visible_result.startswith(sent_visible):
+                            delta = visible_result[len(sent_visible):]
+                        else:
+                            delta = visible_result
+                        yield delta
+                    elif not sent_visible and visible_result:
                         yield visible_result
                     break
                 if "error" in item:
