@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""Standalone HTTP/OpenAI-compatible frontend for isolated roleplay sessions."""
+"""FastAPI / Uvicorn frontend for isolated roleplay sessions with robust anti-524 SSE streaming."""
 from __future__ import annotations
 
 import argparse
+import asyncio
 import hmac
 import json
-import mimetypes
 import os
 import re
 import sys
-import threading
 import time
 import traceback
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from typing import Any, Dict, List, Optional
+
+import uvicorn
+from fastapi import FastAPI, HTTPException, Header, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -23,8 +26,17 @@ if str(ROOT) not in sys.path:
 from plugins.roleplay import engine, storage
 
 UI = ROOT / "plugins" / "roleplay" / "ui.html"
-MODEL_RE = re.compile(r"^roleplay/([^/]+)/([^/]+)$")
 CONFIG_PATH = ROOT / "plugins" / "roleplay" / "config.json"
+
+app = FastAPI(title="GARoleplayAPI", version="2.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 def get_configured_key() -> str:
@@ -57,7 +69,6 @@ def resolve_session_by_model(raw_model: str) -> tuple[str, str] | None:
     raw_model = str(raw_model or "").strip()
     if not raw_model:
         return None
-    # 1. 精确匹配 sessions 中的 model_id、model 或标准 roleplay/<slug>/<session_id>
     for x in storage.list_sessions():
         slug = x.get("slug")
         sid = x.get("session_id")
@@ -77,7 +88,6 @@ def resolve_session_by_model(raw_model: str) -> tuple[str, str] | None:
         if raw_model in candidates:
             return slug, sid
 
-    # 2. 斜杠路径解析
     norm = raw_model
     if norm.startswith("roleplay/"):
         norm = norm[len("roleplay/"):]
@@ -86,15 +96,6 @@ def resolve_session_by_model(raw_model: str) -> tuple[str, str] | None:
         return match.group(1), match.group(2)
 
     return None
-
-
-def body_json(handler: BaseHTTPRequestHandler) -> dict:
-    size = int(handler.headers.get("Content-Length", "0") or 0)
-    raw = handler.rfile.read(size) if size else b"{}"
-    value = json.loads(raw.decode("utf-8"))
-    if not isinstance(value, dict):
-        raise ValueError("JSON body must be an object")
-    return value
 
 
 def message_content_text(content) -> str:
@@ -128,314 +129,332 @@ def extra_system_text(messages) -> str:
     return "\n\n".join(parts)
 
 
-def bearer_token(header: str) -> str:
+def check_auth(authorization: Optional[str] = None):
+    expected = get_configured_key()
+    if not expected:
+        return True
+    if not authorization:
+        raise HTTPException(status_code=401, detail={"error": {"message": "unauthorized"}})
     prefix = "Bearer "
-    if not header.startswith(prefix):
-        return ""
-    return header[len(prefix):].strip()
+    token = authorization[len(prefix):].strip() if authorization.startswith(prefix) else authorization.strip()
+    if not hmac.compare_digest(token, expected):
+        raise HTTPException(status_code=401, detail={"error": {"message": "unauthorized"}})
+    return True
 
 
-class Handler(BaseHTTPRequestHandler):
-    protocol_version = "HTTP/1.1"
-    server_version = "GARoleplay/1.0"
+def _sse_headers() -> Dict[str, str]:
+    return {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        "Connection": "keep-alive",
+        "X-Accel-Buffering": "no",
+    }
 
-    def log_message(self, fmt, *args):
-        sys.stdout.write("[roleplay-api] " + (fmt % args) + "\n")
 
-    def send_bytes(self, status: int, data: bytes, content_type="application/json; charset=utf-8"):
-        self.send_response(status)
-        self.send_header("Content-Type", content_type)
-        if content_type.startswith("text/html"):
-            self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
-            self.send_header("Pragma", "no-cache")
-        self.send_header("Content-Length", str(len(data)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.end_headers()
-        self.wfile.write(data)
+def _sse_data(payload: Optional[Dict[str, Any]]) -> str:
+    if payload is None:
+        return "data: [DONE]\n\n"
+    return f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
 
-    def send_json(self, status: int, value):
-        self.send_bytes(status, json.dumps(value, ensure_ascii=False).encode("utf-8"))
 
-    def begin_sse_chat(self, model: str):
-        chunk_id = "chatcmpl-roleplay"
-        created = int(time.time())
+def _openai_chat_chunk(chat_id: str, created: int, model: str, delta: Dict[str, Any],
+                       finish_reason: Optional[str] = None) -> Dict[str, Any]:
+    return {
+        "id": chat_id,
+        "object": "chat.completion.chunk",
+        "created": created,
+        "model": model,
+        "choices": [
+            {
+                "index": 0,
+                "delta": delta,
+                "finish_reason": finish_reason,
+            }
+        ],
+    }
 
-        def write(value):
-            try:
-                payload = json.dumps(value, ensure_ascii=False)
-                self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
-                self.wfile.flush()
-                return True
-            except (BrokenPipeError, ConnectionResetError):
-                return False
-            except Exception:
-                return False
 
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("Connection", "keep-alive")
-        self.send_header("X-Accel-Buffering", "no")
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.end_headers()
+@app.get("/")
+@app.get("/index.html")
+async def get_index():
+    if not UI.is_file():
+        raise HTTPException(status_code=404, detail="UI file not found")
+    headers = {
+        "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+        "Pragma": "no-cache",
+    }
+    return HTMLResponse(content=UI.read_text(encoding="utf-8"), headers=headers)
+
+
+@app.get("/favicon.ico")
+async def get_favicon():
+    return Response(status_code=204)
+
+
+@app.get("/api/auth/status")
+async def get_auth_status():
+    configured = bool(get_configured_key())
+    return {"has_key": configured, "configured": configured}
+
+
+@app.get("/health")
+async def get_health():
+    return {"ok": True}
+
+
+@app.post("/api/auth/setup")
+async def post_auth_setup(req: Request):
+    data = await req.json()
+    current_key = get_configured_key()
+    if current_key:
+        raise HTTPException(status_code=400, detail={"error": {"message": "Key has already been set"}})
+    key_val = str(data.get("key", "")).strip()
+    if not key_val:
+        raise HTTPException(status_code=400, detail={"error": {"message": "Key cannot be empty"}})
+    set_configured_key(key_val)
+    return {"ok": True, "message": "Key initialized"}
+
+
+@app.post("/api/auth/update")
+async def post_auth_update(req: Request, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    data = await req.json()
+    key_val = str(data.get("key", "")).strip()
+    if not key_val:
+        raise HTTPException(status_code=400, detail={"error": {"message": "Key cannot be empty"}})
+    set_configured_key(key_val)
+    return {"ok": True, "message": "Key updated"}
+
+
+@app.get("/roleplay/sessions")
+async def get_roleplay_sessions(authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    return storage.list_sessions()
+
+
+@app.post("/roleplay/sessions")
+async def create_roleplay_session(req: Request, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    data = await req.json()
+    result = storage.create_session(
+        data.get("slug", ""),
+        data.get("session_id", ""),
+        data.get("title", ""),
+        data.get("canon"),
+    )
+    return JSONResponse(status_code=201, content=result)
+
+
+@app.get("/roleplay/sessions/{slug}/{sid}")
+async def get_single_session(slug: str, sid: str, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    try:
+        return storage.get_session(slug, sid)
+    except KeyError:
+        raise HTTPException(status_code=404, detail={"error": {"message": "session not found"}})
+
+
+@app.delete("/roleplay/sessions/{slug}/{sid}")
+async def delete_single_session(slug: str, sid: str, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    try:
+        storage.delete_session(slug, sid)
+        return {"ok": True, "deleted": True, "slug": slug, "session_id": sid}
+    except KeyError:
+        raise HTTPException(status_code=404, detail={"error": {"message": "session not found"}})
+
+
+@app.post("/roleplay/sessions/{slug}/{sid}/{action}")
+async def handle_session_action(slug: str, sid: str, action: str, req: Request, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    data = await req.json()
+    if action == "chat":
+        loop = asyncio.get_running_loop()
+        reply = await loop.run_in_executor(None, engine.chat, slug, sid, str(data.get("message", "")))
+        return {"reply": reply}
+    elif action == "status":
+        return storage.update_session(slug, sid, status=str(data.get("status", "")))
+    elif action == "settings":
+        return storage.update_session(slug, sid, canon=data.get("canon"))
+    elif action == "bridge":
+        return storage.bridge_receipt(slug, sid)
+    elif action == "undo-last-turn":
+        result = storage.undo_last_turn(slug, sid)
+        engine.reset_runtime(slug, sid)
+        return result
+    elif action == "checkpoint":
+        return {"path": str(storage.checkpoint_l4(slug, sid, data.get("payload", {})))}
+    else:
+        raise HTTPException(status_code=404, detail={"error": {"message": "not found"}})
+
+
+@app.get("/roleplay/npcs")
+async def get_npcs(authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    return storage.list_npcs()
+
+
+@app.post("/roleplay/npcs")
+async def save_npc(req: Request, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    data = await req.json()
+    nid = str(data.get("id", "")).strip()
+    name = str(data.get("name", "")).strip()
+    role = str(data.get("role", "")).strip()
+    persona = str(data.get("persona", "")).strip()
+    style = str(data.get("style", "")).strip()
+    if not name:
+        raise HTTPException(status_code=400, detail={"error": {"message": "NPC name is required"}})
+    saved = storage.save_npc(nid, name, role, persona, style)
+    return {"ok": True, "npc": saved}
+
+
+@app.delete("/roleplay/npcs/{nid}")
+async def delete_npc(nid: str, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    deleted = storage.delete_npc(nid)
+    if deleted:
+        return {"ok": True, "deleted": True}
+    raise HTTPException(status_code=404, detail={"error": {"message": "NPC not found"}})
+
+
+@app.get("/v1/models")
+async def list_models(authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    data = []
+    now = int(time.time())
+    for s in storage.list_sessions():
+        mid = s.get("model_id") or f"roleplay/{s['slug']}/{s['session_id']}"
+        data.append({
+            "id": mid,
+            "object": "model",
+            "created": now,
+            "owned_by": "roleplay",
+            "root": mid,
+            "parent": None,
+        })
+    return {"object": "list", "data": data}
+
+
+@app.get("/v1/models/{model_name:path}")
+async def get_model(model_name: str, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    mid = model_name.strip()
+    target = None
+    for s in storage.list_sessions():
+        cur_mid = s.get("model_id") or s.get("model") or f"roleplay/{s['slug']}/{s['session_id']}"
+        if mid == cur_mid or mid == f"{s['slug']}/{s['session_id']}":
+            target = s
+            break
+    if not target:
+        raise HTTPException(status_code=404, detail={"error": {"message": f"Model '{mid}' not found", "type": "invalid_request_error"}})
+    return {
+        "id": target.get("model_id") or f"roleplay/{target['slug']}/{target['session_id']}",
+        "object": "model",
+        "owned_by": "roleplay",
+        "created": int(time.time()),
+    }
+
+
+async def _sse_generator(slug: str, sid: str, text: str, extra_system: str, chat_id: str, created: int, model: str):
+    # 1. 立即打出合法首帧，建立 200 OK 并确认角色，重置上游/Cloudflare 倒计时
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"role": "assistant", "content": ""}))
+    await asyncio.sleep(0)
+
+    # 2. 将同步生成放入后台线程队列，主循环通过定时 wait 持续输出心跳保活
+    import queue
+    q: queue.Queue = queue.Queue()
+    done_sentinel = object()
+
+    def worker():
         try:
-            self.wfile.write(b": roleplay-ready\n\n")
-            self.wfile.flush()
-        except Exception:
-            pass
-        # Immediate 0-th token frame: establishes instant stream presence for reverse proxies & SillyTavern
-        write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": None}]})
-        return chunk_id, created, write
-
-    def finish_sse_chat(self, model: str, chunk_id: str, created: int, write):
-        try:
-            write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
-            self.wfile.write(b"data: [DONE]\n\n")
-            self.wfile.flush()
-        except Exception:
-            pass
-
-    def error_json(self, status: int, exc: Exception):
-        self.send_json(status, {"error": {"message": str(exc), "type": exc.__class__.__name__}})
-
-    def is_authorized(self) -> bool:
-        configured = get_configured_key()
-        if not configured:
-            return True
-        token = bearer_token(self.headers.get("Authorization", ""))
-        return hmac.compare_digest(token, configured)
-
-    def require_authorized(self) -> bool:
-        if self.is_authorized():
-            return True
-        self.send_json(401, {"error": {"message": "unauthorized"}})
-        return False
-
-    def do_OPTIONS(self):
-        self.send_bytes(204, b"")
-
-    def do_GET(self):
-        try:
-            path = urlparse(self.path).path
-            if path in ("/", "/index.html"):
-                self.send_bytes(200, UI.read_bytes(), "text/html; charset=utf-8")
-                return
-            if path == "/favicon.ico":
-                self.send_bytes(204, b"", "image/x-icon")
-                return
-            if path == "/api/auth/status":
-                configured = bool(get_configured_key())
-                self.send_json(200, {"configured": configured})
-                return
-            if not self.require_authorized():
-                return
-            elif path == "/health":
-                self.send_json(200, {"ok": True, "service": "isolated-roleplay"})
-            elif path == "/roleplay/sessions":
-                self.send_json(200, {"sessions": storage.list_sessions()})
-            elif path == "/roleplay/npcs":
-                self.send_json(200, {"npcs": storage.list_npcs()})
-            elif path == "/v1/models":
-                models = [
-                    {
-                        "id": x.get("model_id") or x.get("model") or f"roleplay/{x['slug']}/{x['session_id']}",
-                        "object": "model",
-                        "owned_by": "roleplay",
-                        "created": int(time.time()),
-                    }
-                    for x in storage.list_sessions()
-                ]
-                self.send_json(200, {"object": "list", "data": models})
-            elif path.startswith("/v1/models/"):
-                mid = path[len("/v1/models/"):]
-                target_session = None
-                for x in storage.list_sessions():
-                    cur_mid = x.get("model_id") or x.get("model") or f"roleplay/{x['slug']}/{x['session_id']}"
-                    if mid == cur_mid or mid == f"{x['slug']}/{x['session_id']}":
-                        target_session = x
-                        break
-                if target_session:
-                    self.send_json(200, {
-                        "id": target_session.get("model_id") or f"roleplay/{target_session['slug']}/{target_session['session_id']}",
-                        "object": "model",
-                        "owned_by": "roleplay",
-                        "created": int(time.time()),
-                    })
-                else:
-                    self.send_json(404, {"error": {"message": f"Model '{mid}' not found", "type": "invalid_request_error"}})
-            else:
-                match = re.fullmatch(r"/roleplay/sessions/([^/]+)/([^/]+)", path)
-                if match:
-                    slug, sid = match.groups()
-                    self.send_json(200, storage.get_session(slug, sid))
-                else:
-                    self.send_json(404, {"error": {"message": "not found"}})
+            for piece in engine.generate(slug, sid, text, extra_system=extra_system):
+                if piece:
+                    q.put(piece)
         except Exception as exc:
-            self.error_json(500, exc)
+            q.put(exc)
+        finally:
+            q.put(done_sentinel)
 
-    def do_DELETE(self):
-        if not self.require_authorized():
-            return
+    import threading
+    t = threading.Thread(target=worker, daemon=True)
+    t.start()
+
+    loop = asyncio.get_running_loop()
+    heartbeat_interval = 8.0  # 每 8 秒一次保活，远低于 Cloudflare 100s 阈值
+
+    while True:
         try:
-            path = urlparse(self.path).path
-            match_npc = re.fullmatch(r"/roleplay/npcs/([^/]+)", path)
-            if match_npc:
-                nid = match_npc.group(1)
-                deleted = storage.delete_npc(nid)
-                if deleted:
-                    self.send_json(200, {"ok": True, "deleted": True})
-                else:
-                    self.send_json(404, {"error": {"message": "NPC not found"}})
-                return
+            # 异步非阻塞等待下一个 piece
+            item = await loop.run_in_executor(None, q.get, True, heartbeat_interval)
+            if item is done_sentinel:
+                break
+            if isinstance(item, Exception):
+                print(f"[roleplay-api] worker error: {item}")
+                break
+            yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"content": item}))
+            await asyncio.sleep(0)
+        except queue.Empty:
+            # 超时无数据产生（模型仍在思考/调用工具），发射空 delta 保活块与标准注释
+            yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"content": ""}))
+            await asyncio.sleep(0)
 
-            match = re.fullmatch(r"/roleplay/sessions/([^/]+)/([^/]+)", path)
-            if not match:
-                self.send_json(404, {"error": {"message": "not found"}})
-                return
-            slug, sid = match.groups()
-            storage.delete_session(slug, sid)
-            self.send_json(200, {"ok": True, "deleted": True, "slug": slug, "session_id": sid})
-        except KeyError:
-            self.send_json(404, {"error": {"message": "session not found"}})
-        except Exception as exc:
-            self.error_json(500, exc)
+    # 3. 正常结束帧
+    yield _sse_data(_openai_chat_chunk(chat_id, created, model, {}, finish_reason="stop"))
+    yield _sse_data(None)
 
-    def do_POST(self):
-        try:
-            path = urlparse(self.path).path
-            data = body_json(self)
-            if path == "/api/auth/setup":
-                current_key = get_configured_key()
-                if current_key:
-                    self.send_json(400, {"error": {"message": "Key has already been set"}})
-                    return
-                key_val = str(data.get("key", "")).strip()
-                if not key_val:
-                    self.send_json(400, {"error": {"message": "Key cannot be empty"}})
-                    return
-                set_configured_key(key_val)
-                self.send_json(200, {"ok": True, "message": "Key initialized"})
-                return
 
-            if not self.require_authorized():
-                return
+@app.post("/v1/chat/completions")
+async def chat_completions(req: Request, authorization: Optional[str] = Header(None)):
+    check_auth(authorization)
+    try:
+        data = await req.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail={"error": {"message": "Invalid JSON body"}})
 
-            if path == "/api/auth/update":
-                key_val = str(data.get("key", "")).strip()
-                if not key_val:
-                    self.send_json(400, {"error": {"message": "Key cannot be empty"}})
-                    return
-                set_configured_key(key_val)
-                self.send_json(200, {"ok": True, "message": "Key updated"})
-                return
+    raw_model = str(data.get("model", "")).strip()
+    resolved = resolve_session_by_model(raw_model)
+    if not resolved:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": {"message": f"model must be 'roleplay/<story>/<session>', '<story>/<session>', or configured model_id, got: {raw_model}"}}
+        )
 
-            if path == "/roleplay/npcs":
-                nid = str(data.get("id", "")).strip()
-                name = str(data.get("name", "")).strip()
-                role = str(data.get("role", "")).strip()
-                persona = str(data.get("persona", "")).strip()
-                style = str(data.get("style", "")).strip()
-                if not name:
-                    self.send_json(400, {"error": {"message": "NPC name is required"}})
-                    return
-                saved = storage.save_npc(nid, name, role, persona, style)
-                self.send_json(200, {"ok": True, "npc": saved})
-                return
-            if path == "/roleplay/sessions":
-                result = storage.create_session(
-                    data.get("slug", ""),
-                    data.get("session_id", ""),
-                    data.get("title", ""),
-                    data.get("canon"),
-                )
-                self.send_json(201, result)
-                return
-            if path == "/v1/chat/completions":
-                raw_model = str(data.get("model", "")).strip()
-                resolved = resolve_session_by_model(raw_model)
-                if not resolved:
-                    raise ValueError(f"model must be 'roleplay/<story>/<session>', '<story>/<session>', or configured model_id, got: {data.get('model')}")
-                slug, sid = resolved
-                messages = data.get("messages")
-                text = last_user_text(messages)
-                extra_system = extra_system_text(messages)
-                model_name = data.get("model")
-                if data.get("stream"):
-                    chunk_id, created, write = self.begin_sse_chat(data["model"])
-                    stop_heartbeat = threading.Event()
+    slug, sid = resolved
+    messages = data.get("messages")
+    try:
+        text = last_user_text(messages)
+        extra_system = extra_system_text(messages)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"error": {"message": str(e)}})
 
-                    def heartbeat_worker():
-                        while not stop_heartbeat.wait(timeout=10.0):
-                            try:
-                                self.wfile.write(b": keepalive\n\n")
-                                self.wfile.flush()
-                            except (BrokenPipeError, ConnectionResetError):
-                                break
-                            except Exception:
-                                break
+    model_name = data.get("model", raw_model)
+    created = int(time.time())
+    chat_id = f"chatcmpl-roleplay-{created}"
 
-                    hb_thread = threading.Thread(target=heartbeat_worker, daemon=True)
-                    hb_thread.start()
-                    try:
-                        for piece in engine.generate(slug, sid, text, extra_system=extra_system):
-                            if piece:
-                                ok = write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]})
-                                if not ok:
-                                    break
-                    except (BrokenPipeError, ConnectionResetError):
-                        pass
-                    except Exception as exc:
-                        print(f"[roleplay-api] streaming error: {exc}")
-                    finally:
-                        stop_heartbeat.set()
-                        hb_thread.join(timeout=1.0)
-                    self.finish_sse_chat(data["model"], chunk_id, created, write)
-                    return
-                if not data.get("stream"):
-                    ans = engine.chat(slug, sid, text, extra_system=extra_system)
-                    self.send_json(200, {
-                        "id": "chatcmpl-roleplay",
-                        "object": "chat.completion",
-                        "created": int(time.time()),
-                        "model": data["model"],
-                        "choices": [{
-                            "index": 0,
-                            "message": {"role": "assistant", "content": ans},
-                            "finish_reason": "stop"
-                        }],
-                        "usage": {"prompt_tokens": 0, "completion_tokens": len(ans), "total_tokens": len(ans)}
-                    })
-                    return
-            match = re.fullmatch(r"/roleplay/sessions/([^/]+)/([^/]+)/(chat|status|settings|bridge|checkpoint|undo-last-turn)", path)
-            if not match:
-                self.send_json(404, {"error": {"message": "not found"}})
-                return
-            slug, sid, action = match.groups()
-            if action == "chat":
-                self.send_json(200, {"reply": engine.chat(slug, sid, str(data.get("message", "")))})
-            elif action == "status":
-                self.send_json(200, storage.update_session(slug, sid, status=str(data.get("status", ""))))
-            elif action == "settings":
-                self.send_json(200, storage.update_session(slug, sid, canon=data.get("canon")))
-            elif action == "bridge":
-                self.send_json(200, storage.bridge_receipt(slug, sid))
-            elif action == "undo-last-turn":
-                result = storage.undo_last_turn(slug, sid)
-                engine.reset_runtime(slug, sid)
-                self.send_json(200, result)
-            else:
-                self.send_json(200, {"path": str(storage.checkpoint_l4(slug, sid, data.get("payload", {})))})
-        except (ValueError, KeyError, FileNotFoundError) as exc:
-            self.error_json(400, exc)
-        except (BrokenPipeError, ConnectionResetError):
-            return
-        except Exception as exc:
-            traceback.print_exc()
-            self.error_json(500, exc)
+    # 流式请求：使用 FastAPI StreamingResponse + 零耗心跳生成器，彻底终结 524
+    if data.get("stream"):
+        return StreamingResponse(
+            _sse_generator(slug, sid, text, extra_system, chat_id, created, model_name),
+            media_type="text/event-stream",
+            headers=_sse_headers(),
+        )
+
+    # 非流式请求：同样在异步线程池执行，支持长时生成不阻塞事件循环
+    loop = asyncio.get_running_loop()
+    ans = await loop.run_in_executor(None, engine.chat, slug, sid, text, extra_system)
+    return {
+        "id": chat_id,
+        "object": "chat.completion",
+        "created": created,
+        "model": model_name,
+        "choices": [{
+            "index": 0,
+            "message": {"role": "assistant", "content": ans},
+            "finish_reason": "stop"
+        }],
+        "usage": {"prompt_tokens": 0, "completion_tokens": len(ans), "total_tokens": len(ans)}
+    }
 
 
 def main():
@@ -443,9 +462,8 @@ def main():
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=8876)
     args = parser.parse_args()
-    server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"roleplay frontend: http://{args.host}:{args.port}")
-    server.serve_forever()
+    print(f"roleplay frontend (FastAPI/Uvicorn): http://{args.host}:{args.port}")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 
 if __name__ == "__main__":
