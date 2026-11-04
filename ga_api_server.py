@@ -621,6 +621,24 @@ def _dialogue_text(message):
                      if isinstance(b, dict) and b.get("type") == "text")
 
 
+_TS_HEADER = r"\[\s*(?:时间未知（旧记录）|\d{4}-\d{2}-\d{2}[T ][^\]\n]*|\d{1,2}:\d{2}(?::\d{2})?)\s*\]"
+# 网关注入历史时拼在正文前的来源标签写法：【.微信私聊.】/【.群聊.】/【来源未标记】等。
+_SRC_HEADER = r"【\s*(?:\.[^\n]*?\.|来源未标记|来源微信[^】\n]*|来源群[^】\n]*)】"
+# 必须用 ^ 锚定在正文开头：不带锚点时 re.sub 会把正文中间的时间戳/【】也一并吃掉，
+# 例如"我说[08:10]出门"会被削成"我说出门"。
+_HISTORY_HEADER_RE = re.compile(rf"^(?:\s*(?:{_TS_HEADER}|{_SRC_HEADER}))+")
+
+
+def _strip_history_headers(value):
+    """剥掉正文开头由网关拼上的历史头（时间戳 / 来源标签，可任意组合叠加）。
+
+    只在**开头**剥，正文中间出现的时间和【】一律不动——模型正常行文里也会用到。
+    """
+    if not value:
+        return value
+    return _HISTORY_HEADER_RE.sub("", value.lstrip(), count=1).strip()
+
+
 def _clean_chat_reply(text):
     # Unwrap only the known final-answer envelope, not arbitrary JSON prose.
     value = strip_final_info_marker(text)
@@ -633,8 +651,10 @@ def _clean_chat_reply(text):
         pass
     value = _clean_api_response(value)
     # Remove only a leading history metadata header, never timestamps in prose.
-    value = re.sub(r"^\s*\[(?:时间未知（旧记录）|\d{4}-\d{2}-\d{2}[T ][^\]\n]+)\]\s*", "", value)
-    value = re.sub(r"^\s*(?:【\.[^\n]*?\.】|【来源未标记】)\s*", "", value)
+    # 历史头是网关拼出来的，可能叠好几段（[时间] 【.来源.】 [时间] 【.来源.】 …），
+    # 也可能只有当日时分。旧实现只剥一轮且不认 [HH:MM]，
+    # 于是模型模仿出来的 "[08:10] 【.微信私聊.】 昨晚躺下得早…" 会整段漏进正文并再存进历史。
+    value = _strip_history_headers(value)
     return value.strip()
 
 
@@ -651,6 +671,35 @@ def _is_json_dict_string(s):
     return False
 
 
+# 微信提示词里"本轮待回复的新消息"段落的可能分隔标记，按实际出现过的写法收录。
+# 私聊/群聊服务端的措辞并不统一，缺失任何一个都会导致切分失败、把整段指令原文
+# 当成对话正文存进历史（表现为历史里出现大段"你是一个..."式的系统提示）。
+_NEW_MSG_MARKERS = (
+    "需要综合回复的新消息：",
+    "需要回复的新消息：",
+    "【新消息】",
+    "【最近消息】",
+)
+
+
+def _split_new_messages(text):
+    """切出待回复的新消息段。
+
+    多个标记都出现时取**最靠后**的那个：历史背景里也常出现同名小节标题，
+    若取第一个会把历史当成新消息。找不到任何标记则原样返回。
+    """
+    if not isinstance(text, str) or not text:
+        return text
+    pos, hit = -1, None
+    for marker in _NEW_MSG_MARKERS:
+        idx = text.rfind(marker)
+        if idx > pos:
+            pos, hit = idx, marker
+    if hit is None:
+        return text
+    return text[pos + len(hit):]
+
+
 def _extract_wechat_record_info(text, default_timestamp=None):
     """
     Extracts clean conversation content, platform source tag, and timestamp from WeChat prompts.
@@ -662,13 +711,7 @@ def _extract_wechat_record_info(text, default_timestamp=None):
         # inside the prompt as a 【.xxx.】 tag; GA only extracts it (never hardcodes).
         m_src = re.search(r"【\.([^】\n]*?)\.】", text)
         src = f"【.{m_src.group(1)}.】" if m_src else "【.微信私聊.】"
-        target_part = ""
-        if "需要综合回复的新消息：" in text:
-            target_part = text.split("需要综合回复的新消息：", 1)[1]
-        elif "【新消息】" in text:
-            target_part = text.split("【新消息】", 1)[1]
-        else:
-            target_part = text
+        target_part = _split_new_messages(text)
 
         lines = [l.strip() for l in target_part.splitlines() if l.strip()]
         valid_lines = []
@@ -690,7 +733,7 @@ def _extract_wechat_record_info(text, default_timestamp=None):
                     valid_lines.append(l)
 
         content = "\n".join(valid_lines) if valid_lines else target_part[:300].strip()
-        ts = msg_ts or default_timestamp
+        ts = default_timestamp or msg_ts
         return content, src, ts
 
     if "来源微信群：" in text or "眼前的群聊，是你和大家身处的公共空间" in text or "现在已经处于高频互动中" in text:
@@ -698,15 +741,7 @@ def _extract_wechat_record_info(text, default_timestamp=None):
         group_name = m_group.group(1).strip() if m_group else ""
         src = f"【.微信群聊·{group_name}.】" if group_name else "【.微信群聊.】"
 
-        target_part = ""
-        if "需要回复的新消息：" in text:
-            target_part = text.split("需要回复的新消息：", 1)[1]
-        elif "【新消息】" in text:
-            target_part = text.split("【新消息】", 1)[1]
-        elif "【最近消息】" in text:
-            target_part = text.split("【最近消息】", 1)[1]
-        else:
-            target_part = text
+        target_part = _split_new_messages(text)
 
         lines = [l.strip() for l in target_part.splitlines() if l.strip()]
         valid_lines = []
@@ -741,7 +776,7 @@ def _extract_wechat_record_info(text, default_timestamp=None):
                     valid_lines.append(l)
 
         content = "\n".join(valid_lines) if valid_lines else target_part[:300].strip()
-        ts = msg_ts or default_timestamp
+        ts = default_timestamp or msg_ts
         return content, src, ts
 
     return None
@@ -816,6 +851,9 @@ def _clean_history_content(content: str, role: str) -> str:
             except Exception:
                 pass
         text = re.sub(r"<(?:think|thought|summary)>.*?</(?:think|thought|summary)>", "", text, flags=re.DOTALL).strip()
+        # 历史里可能残留早期版本写进去的 "[08:10] 【.微信私聊.】 正文"（剥离正则不认短戳时漏的），
+        # 送模前统一剥掉，避免模型继续照抄这个格式。
+        text = _strip_history_headers(text)
     elif role == "user":
         if "【群聊近期上下文】" in text and "【本轮待处理的新增内容】" in text:
             parts = text.split("【本轮待处理的新增内容】", 1)

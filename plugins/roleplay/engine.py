@@ -53,6 +53,34 @@ _INTERNAL_LINE_RE = re.compile(
 _INTERNAL_HEADING_RE = re.compile(r"^\s*\*\*\s*[A-Z][A-Za-z0-9 ,:'’/()\-]+\s*\*\*\s*$")
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
 
+_HIDDEN_TAGS = (
+    r"summary|think|thinking|thought|analysis|reasoning|reasoning_content|"
+    r"function_calls?|function_results?|tool_calls?|tool_results?"
+)
+_TOKEN_RE = re.compile(rf"<\s*(/?)\s*({_HIDDEN_TAGS})\b[^>]*>", re.IGNORECASE)
+_TRAILING_TAG_RE = re.compile(rf"<\s*/?\s*(?:{_HIDDEN_TAGS})\b[^>]*\Z", re.IGNORECASE)
+
+
+def _strip_hidden_tags(text: str) -> str:
+    """与 ga_api_server 对齐的标准隐藏标签状态机：过滤 think/thought/reasoning 等协议块（含未闭合块）。"""
+    value = str(text or "")
+    chunks, stack, cursor = [], [], 0
+    for match in _TOKEN_RE.finditer(value):
+        if not stack:
+            chunks.append(value[cursor:match.start()])
+        name = match.group(2).lower()
+        if match.group(1):
+            if name in stack:
+                index = len(stack) - 1 - stack[::-1].index(name)
+                del stack[index:]
+        elif not re.search(r"/\s*>$", match.group(0)):
+            stack.append(name)
+        cursor = match.end()
+    if not stack:
+        chunks.append(value[cursor:])
+    value = "".join(chunks)
+    return _TRAILING_TAG_RE.sub("", value)
+
 
 def _truncate_backend_history(hist: list, turns: int) -> list:
     """Trim backend history to at most `turns` dialogue rounds (pairs of user/assistant)."""
@@ -87,13 +115,34 @@ def _drop_leading_internal_sections(text: str) -> str:
 
 
 def _drop_leading_english_preamble(text: str) -> str:
-    match = _CJK_RE.search(text)
+    """剔除模型开头的思维构思草稿（例如开头复述需求、英文大纲拆解等）。"""
+    s = text.strip()
+
+    # 场景1：开头包含一小句中文标记（如 "番外) "、"构思："）后跟着大段英文分析直到故事标题
+    cot_leak = re.search(
+        r"(?is)\b(?:Let me analyze|I need to write|I should write|The user wants|Writing plan|Scenario outline)\b[\s\S]*?(?=(?:#+\s*|【|第[一二三四五六七八九十\d]+章))",
+        s,
+    )
+    if cot_leak and cot_leak.start() < 200:
+        return s[cot_leak.end():].strip()
+
+    match = _CJK_RE.search(s)
     if not match:
-        return text.strip()
-    prefix = text[:match.start()]
-    if prefix and re.search(r"[A-Za-z]", prefix) and not _CJK_RE.search(prefix):
-        return text[match.start():].lstrip(" `：:，,。.!！?？\n\t")
-    return text.strip()
+        return s
+
+    # 场景2：大段英文思考/构思直接开头，直到正文首段中文或 Markdown 标题
+    cjk_idx = match.start()
+    last_nl = s.rfind("\n", 0, cjk_idx)
+    line_start = 0 if last_nl == -1 else last_nl + 1
+    prefix_lines = s[:line_start].strip()
+    current_line_prefix = s[line_start:cjk_idx]
+
+    if prefix_lines and re.search(r"[A-Za-z]", prefix_lines) and not _CJK_RE.search(prefix_lines):
+        s = s[line_start:].strip()
+    elif not prefix_lines and current_line_prefix and re.search(r"[A-Za-z]", current_line_prefix):
+        s = s[cjk_idx:].lstrip(" `：:，,。.!！?？\n\t")
+
+    return s.strip()
 
 
 def _visible_text(raw: str) -> str:
@@ -101,6 +150,9 @@ def _visible_text(raw: str) -> str:
     match = _FINAL_MARK_RE.search(text)
     if match:
         text = match.group(1)
+    # 1. 隐藏标签过滤（think/thought/reasoning 等）
+    text = _strip_hidden_tags(text)
+    # 2. 内部块与行过滤
     text = _INTERNAL_BLOCK_RE.sub("", text)
     text = _drop_leading_internal_sections(text)
     text = _drop_leading_english_preamble(text)

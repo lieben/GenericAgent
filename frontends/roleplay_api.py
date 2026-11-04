@@ -65,6 +65,38 @@ def set_configured_key(new_key: str):
     CONFIG_PATH.write_text(json.dumps(cfg, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def _clean_api_response(text: str) -> str:
+    """与 ga_api_server 对齐：对输出文本做最后兜底清洗，剔除未闭合或漏网的思维链标签及前导草稿。"""
+    value = str(text or "")
+    hidden_tags = (
+        r"summary|think|thinking|thought|analysis|reasoning|reasoning_content|"
+        r"function_calls?|function_results?|tool_calls?|tool_results?"
+    )
+    token_re = re.compile(
+        rf"<\s*(/?)\s*({hidden_tags})\b[^>]*>", re.IGNORECASE
+    )
+    chunks, stack, cursor = [], [], 0
+    for match in token_re.finditer(value):
+        if not stack:
+            chunks.append(value[cursor:match.start()])
+        name = match.group(2).lower()
+        if match.group(1):
+            if name in stack:
+                index = len(stack) - 1 - stack[::-1].index(name)
+                del stack[index:]
+        elif not re.search(r"/\s*>$", match.group(0)):
+            stack.append(name)
+        cursor = match.end()
+    if not stack:
+        chunks.append(value[cursor:])
+    value = "".join(chunks)
+    value = re.sub(
+        rf"<\s*/?\s*(?:{hidden_tags})\b[^>]*\Z", "", value,
+        flags=re.IGNORECASE,
+    )
+    return value.strip()
+
+
 def resolve_session_by_model(raw_model: str) -> tuple[str, str] | None:
     raw_model = str(raw_model or "").strip()
     if not raw_model:
@@ -443,6 +475,7 @@ async def chat_completions(req: Request, authorization: Optional[str] = Header(N
     # 非流式请求：同样在异步线程池执行，支持长时生成不阻塞事件循环
     loop = asyncio.get_running_loop()
     ans = await loop.run_in_executor(None, engine.chat, slug, sid, text, extra_system)
+    ans = _clean_api_response(ans)
     return {
         "id": chat_id,
         "object": "chat.completion",
