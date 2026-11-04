@@ -142,6 +142,13 @@ def get_session(slug: str, session_id: str) -> dict:
         if not sdir.exists():
             raise FileNotFoundError(f"Session not found: {slug}/{session_id}")
         canon = _read(sdir / "canon.json", {})
+        if "context_config" not in canon or not isinstance(canon["context_config"], dict):
+            canon["context_config"] = {
+                "mode": "dialogue",
+                "dialogue_turns": 8,
+                "summary_turns": 5,
+                "macro_interval": 10
+            }
         state = _read(sdir / "state.json", {})
         summary = _read(sdir / "summary.json", {})
         reg = _registry()
@@ -214,7 +221,11 @@ def update_session(slug: str, session_id: str, canon: dict | None = None, status
         now_ts = now()
         if canon is not None:
             curr = _read(sdir / "canon.json", {})
-            curr.update(canon)
+            for k, v in canon.items():
+                if k == "context_config" and isinstance(v, dict) and isinstance(curr.get("context_config"), dict):
+                    curr["context_config"].update(v)
+                else:
+                    curr[k] = v
             _atomic(sdir / "canon.json", curr)
         if status is not None:
             curr_s = _read(sdir / "state.json", {})
@@ -476,7 +487,10 @@ def prompt_for(slug: str, session_id: str, current_query: str = "") -> str:
         clean_summary_payload["全剧宏观总括(开局至今核心里程碑)"] = macro_milestone
         clean_summary_payload["近期阶段梗概(承接微观脉络)"] = recent_steps_text
 
-    clean_summary_payload[f"最新近景交互(近{conf_dialogue_turns}轮完整细节)"] = fresh_recent
+    if conf_dialogue_turns > 0:
+        clean_summary_payload[f"最新近景交互(近{conf_dialogue_turns}轮完整细节)"] = fresh_recent
+    else:
+        clean_summary_payload["最新近景交互"] = "(不保留近景对白上下文)"
 
     recalled_memory_block = ""
     query_str = (current_query or "").strip()

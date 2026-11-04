@@ -54,6 +54,19 @@ _INTERNAL_HEADING_RE = re.compile(r"^\s*\*\*\s*[A-Z][A-Za-z0-9 ,:'’/()\-]+\s*\
 _CJK_RE = re.compile(r"[\u3400-\u9fff]")
 
 
+def _truncate_backend_history(hist: list, turns: int) -> list:
+    """Trim backend history to at most `turns` dialogue rounds (pairs of user/assistant)."""
+    if not isinstance(hist, list) or turns <= 0:
+        return []
+    # Each round is 1 user + 1 assistant message, so keep at most 2 * turns messages
+    keep_n = turns * 2
+    trimmed = hist[-keep_n:] if len(hist) > keep_n else list(hist)
+    # Ensure history starts with a user message for protocol compliance
+    while trimmed and trimmed[0].get("role") != "user":
+        trimmed.pop(0)
+    return trimmed
+
+
 def _drop_leading_internal_sections(text: str) -> str:
     lines = text.splitlines()
     index = 0
@@ -122,6 +135,16 @@ def generate(slug: str, session_id: str, text: str, extra_system: str = ""):
         # GenericAgent construction may reload normal tools; enforce tools-off
         # after construction as well, before the task can begin.
         agentmain.TOOLS_SCHEMA = []
+
+        # Enforce canon-configured dialogue turns onto backend history before run
+        session_data = storage.get_session(slug, session_id)
+        canon_cfg = session_data.get("canon", {}).get("context_config", {})
+        dialogue_turns = int(canon_cfg.get("dialogue_turns", 8))
+        if hasattr(agent, "llmclient") and hasattr(agent.llmclient, "backend"):
+            raw_backend_hist = getattr(agent.llmclient.backend, "history", [])
+            trimmed_hist = _truncate_backend_history(raw_backend_hist, dialogue_turns)
+            agent.llmclient.backend.history = trimmed_hist
+
         with _locks[key]:
             q = agent.put_task(text, source=key)
             raw_result = ""
@@ -155,7 +178,22 @@ def generate(slug: str, session_id: str, text: str, extra_system: str = ""):
                 if "error" in item:
                     raise RuntimeError(f"roleplay backend error: {item['error']}")
 
-            persist_agent_backend_history(agent, key, storage.HISTORY)
+            # Post-run: trim backend history again to preserve only canon-configured turns
+            if hasattr(agent, "llmclient") and hasattr(agent.llmclient, "backend"):
+                raw_backend_hist = getattr(agent.llmclient.backend, "history", [])
+                trimmed_hist = _truncate_backend_history(raw_backend_hist, dialogue_turns)
+                agent.llmclient.backend.history = trimmed_hist
+                # Force persist trimmed history directly into storage.HISTORY to bypass shrink-refusal
+                from plugins.local_frontends.session_history import load_session_state, save_session_state, _SESSION_LOCK, _sanitize_backend_history
+                with _SESSION_LOCK:
+                    data = load_session_state(storage.HISTORY)
+                    entry = data.get(key)
+                    if not isinstance(entry, dict):
+                        entry = {}
+                    entry['backend_history'] = _sanitize_backend_history(trimmed_hist)
+                    entry.setdefault('agent_history', [])
+                    data[key] = entry
+                    save_session_state(data, storage.HISTORY)
             storage.append_turn(slug, session_id, text, visible_result)
             return visible_result
 

@@ -163,9 +163,15 @@ class Handler(BaseHTTPRequestHandler):
         created = int(time.time())
 
         def write(value):
-            payload = json.dumps(value, ensure_ascii=False)
-            self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
-            self.wfile.flush()
+            try:
+                payload = json.dumps(value, ensure_ascii=False)
+                self.wfile.write(f"data: {payload}\n\n".encode("utf-8"))
+                self.wfile.flush()
+                return True
+            except (BrokenPipeError, ConnectionResetError):
+                return False
+            except Exception:
+                return False
 
         self.send_response(200)
         self.send_header("Content-Type", "text/event-stream; charset=utf-8")
@@ -176,15 +182,22 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.end_headers()
-        self.wfile.write(b": roleplay-ready\n\n")
-        self.wfile.flush()
-        write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}]})
+        try:
+            self.wfile.write(b": roleplay-ready\n\n")
+            self.wfile.flush()
+        except Exception:
+            pass
+        # Immediate 0-th token frame: establishes instant stream presence for reverse proxies & SillyTavern
+        write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {"role": "assistant", "content": ""}, "finish_reason": None}]})
         return chunk_id, created, write
 
     def finish_sse_chat(self, model: str, chunk_id: str, created: int, write):
-        write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
-        self.wfile.write(b"data: [DONE]\n\n")
-        self.wfile.flush()
+        try:
+            write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": model, "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]})
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+        except Exception:
+            pass
 
     def error_json(self, status: int, exc: Exception):
         self.send_json(status, {"error": {"message": str(exc), "type": exc.__class__.__name__}})
@@ -356,10 +369,12 @@ class Handler(BaseHTTPRequestHandler):
                     stop_heartbeat = threading.Event()
 
                     def heartbeat_worker():
-                        while not stop_heartbeat.wait(timeout=5.0):
+                        while not stop_heartbeat.wait(timeout=10.0):
                             try:
                                 self.wfile.write(b": keepalive\n\n")
                                 self.wfile.flush()
+                            except (BrokenPipeError, ConnectionResetError):
+                                break
                             except Exception:
                                 break
 
@@ -368,7 +383,11 @@ class Handler(BaseHTTPRequestHandler):
                     try:
                         for piece in engine.generate(slug, sid, text, extra_system=extra_system):
                             if piece:
-                                write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]})
+                                ok = write({"id": chunk_id, "object": "chat.completion.chunk", "created": created, "model": data["model"], "choices": [{"index": 0, "delta": {"content": piece}, "finish_reason": None}]})
+                                if not ok:
+                                    break
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
                     except Exception as exc:
                         print(f"[roleplay-api] streaming error: {exc}")
                     finally:

@@ -841,35 +841,31 @@
     if (btnChat) btnChat.classList.remove('active');
     if (btnC) btnC.classList.remove('active');
 
+    const d = $('ctxDialogueTurns');
+    const s = $('ctxSummaryTurns');
+    const m = $('ctxMacroInterval');
+
     if (mode === 'dialogue') {
       if (btnD) btnD.classList.add('active');
-      const d = $('ctxDialogueTurns');
-      const s = $('ctxSummaryTurns');
-      const m = $('ctxMacroInterval');
       if (d) d.value = 8;
       if (s) s.value = 5;
       if (m) m.value = 10;
       log('已切换至预设：💬 短小对话式 (对白8轮 / 梗概5轮 / 大纲10轮)');
     } else if (mode === 'novel') {
       if (btnN) btnN.classList.add('active');
-      const d = $('ctxDialogueTurns');
-      const s = $('ctxSummaryTurns');
-      const m = $('ctxMacroInterval');
       if (d) d.value = 2;
       if (s) s.value = 3;
       if (m) m.value = 5;
       log('已切换至预设：📖 长篇小说式 (对白2轮 / 梗概3轮 / 大纲5轮)');
     } else if (mode === 'chat') {
       if (btnChat) btnChat.classList.add('active');
-      const d = $('ctxDialogueTurns');
-      const s = $('ctxSummaryTurns');
-      const m = $('ctxMacroInterval');
       if (d) d.value = 15;
       if (s) s.value = 0;
       if (m) m.value = 0;
       log('已切换至预设：💭 普通聊天/论坛 (无总结纯对白15轮)');
     } else {
       if (btnC) btnC.classList.add('active');
+      currentPresetMode = 'custom';
       log('已切换至预设：⚙️ 自定义参数');
     }
   };
@@ -883,6 +879,7 @@
     const btnN = $('btnPresetNovel');
     const btnChat = $('btnPresetChat');
     const btnC = $('btnPresetCustom');
+
     if (btnD) btnD.classList.remove('active');
     if (btnN) btnN.classList.remove('active');
     if (btnChat) btnChat.classList.remove('active');
@@ -890,24 +887,16 @@
 
     if (d === 8 && s === 5 && m === 10) {
       if (btnD) btnD.classList.add('active');
+      currentPresetMode = 'dialogue';
     } else if (d === 2 && s === 3 && m === 5) {
       if (btnN) btnN.classList.add('active');
+      currentPresetMode = 'novel';
     } else if (d === 15 && s === 0 && m === 0) {
       if (btnChat) btnChat.classList.add('active');
+      currentPresetMode = 'chat';
     } else {
       if (btnC) btnC.classList.add('active');
-    }
-    if (btnC) btnC.classList.remove('active');
-
-    if (d === 8 && s === 5 && m === 10) {
-      currentPresetMode = 'dialogue';
-      if (btnD) btnD.classList.add('active');
-    } else if (d === 2 && s === 3 && m === 5) {
-      currentPresetMode = 'novel';
-      if (btnN) btnN.classList.add('active');
-    } else {
       currentPresetMode = 'custom';
-      if (btnC) btnC.classList.add('active');
     }
   };
 
@@ -990,18 +979,35 @@
       $('storyOpener').value = c.story || '';
       
       const ctx = c.context_config || {};
-      const dVal = (ctx.dialogue_turns !== undefined) ? ctx.dialogue_turns : 8;
-      const sVal = (ctx.summary_turns !== undefined) ? ctx.summary_turns : 5;
-      const mVal = (ctx.macro_interval !== undefined) ? ctx.macro_interval : 10;
-      $('ctxDialogueTurns').value = dVal;
-      $('ctxSummaryTurns').value = sVal;
-      $('ctxMacroInterval').value = mVal;
-      if (dVal === 8 && sVal === 5 && mVal === 10) {
-        applyPreset('dialogue');
-      } else if (dVal === 2 && sVal === 3 && mVal === 5) {
-        applyPreset('novel');
+      const dVal = (ctx.dialogue_turns !== undefined) ? parseInt(ctx.dialogue_turns, 10) : 8;
+      const sVal = (ctx.summary_turns !== undefined) ? parseInt(ctx.summary_turns, 10) : 5;
+      const mVal = (ctx.macro_interval !== undefined) ? parseInt(ctx.macro_interval, 10) : 10;
+      $('ctxDialogueTurns').value = isNaN(dVal) ? 8 : Math.max(0, dVal);
+      $('ctxSummaryTurns').value = isNaN(sVal) ? 5 : Math.max(0, sVal);
+      $('ctxMacroInterval').value = isNaN(mVal) ? 10 : Math.max(0, mVal);
+
+      const btnD = $('btnPresetDialogue');
+      const btnN = $('btnPresetNovel');
+      const btnChat = $('btnPresetChat');
+      const btnC = $('btnPresetCustom');
+      if (btnD) btnD.classList.remove('active');
+      if (btnN) btnN.classList.remove('active');
+      if (btnChat) btnChat.classList.remove('active');
+      if (btnC) btnC.classList.remove('active');
+
+      const savedMode = ctx.mode;
+      if (savedMode === 'dialogue' || (!savedMode && dVal === 8 && sVal === 5 && mVal === 10)) {
+        if (btnD) btnD.classList.add('active');
+        currentPresetMode = 'dialogue';
+      } else if (savedMode === 'novel' || (!savedMode && dVal === 2 && sVal === 3 && mVal === 5)) {
+        if (btnN) btnN.classList.add('active');
+        currentPresetMode = 'novel';
+      } else if (savedMode === 'chat' || (!savedMode && dVal === 15 && sVal === 0 && mVal === 0)) {
+        if (btnChat) btnChat.classList.add('active');
+        currentPresetMode = 'chat';
       } else {
-        applyPreset('custom');
+        if (btnC) btnC.classList.add('active');
+        currentPresetMode = 'custom';
       }
 
       const selNpcIds = new Set(c.selected_npc_ids || []);
@@ -1051,6 +1057,11 @@
     }
     const selected_npc_ids = Array.from(document.querySelectorAll('#npcSelectorBox input[type="checkbox"]:checked')).map(cb => cb.value);
 
+    const parseTurns = (valStr, def) => {
+      const v = parseInt(valStr, 10);
+      return isNaN(v) ? def : Math.max(0, v);
+    };
+
     const canon = {
       title: title || `${slug}/${sid}`,
       core_persona: $('corePersona').value,
@@ -1065,9 +1076,9 @@
       },
       context_config: {
         mode: currentPresetMode,
-        dialogue_turns: parseInt($('ctxDialogueTurns').value, 10) || 8,
-        summary_turns: parseInt($('ctxSummaryTurns').value, 10) || 5,
-        macro_interval: parseInt($('ctxMacroInterval').value, 10) || 10
+        dialogue_turns: parseTurns($('ctxDialogueTurns').value, 8),
+        summary_turns: parseTurns($('ctxSummaryTurns').value, 5),
+        macro_interval: parseTurns($('ctxMacroInterval').value, 10)
       }
     };
 
