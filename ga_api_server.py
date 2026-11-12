@@ -919,8 +919,18 @@ def _run_api_chat_turn(query, instructions="", attachments=None):
             f"【沉浸第一人称约定】与{_partner_name}对话交流或自称时，必须始终使用第一人称“我”，"
             f"严禁在对白中以第三人称（如“{_self_name}”）称呼自己（如严禁出现“{_self_name}就在旁边”、“{_self_name}觉得”等）。")
         if instructions:
-            api_agent.extra_sys_prompts.append(
-                "【API 当轮特殊指令及召回内容，仅本轮有效】\n" + instructions)
+            # 平台频道设定与召回内容必须分开：前者是用户为本次对话亲手写下的最高优先级
+            # 设定（场景规则、身份规则、玩法规则），后者是检索出来的参考记忆。混在一段并
+            # 统一标注"召回内容/仅本轮有效"会让模型把它当作可忽略的临时参考资料。
+            _platform_head = "【平台频道设定·最高优先级·必须严格遵守】\n"
+            _recall_head = "【本轮检索到的参考记忆（仅供参考，不得压过上方频道设定）】\n"
+            _segments = _split_instructions(instructions)
+            if _segments["platform"]:
+                api_agent.extra_sys_prompts.append(
+                    _platform_head + _segments["platform"])
+            if _segments["recall"]:
+                api_agent.extra_sys_prompts.append(
+                    _recall_head + _segments["recall"])
         received_at = datetime.now().astimezone().isoformat()
         try:
             raw_reply = _run_api_turn_native(query, attachments=attachments)
@@ -1254,6 +1264,44 @@ def _request_prompts(messages, instructions=""):
         if instruction_text.strip():
             prompts.insert(0, instruction_text)
     return prompts
+
+
+def _split_instructions(text):
+    """Split combined instruction text into platform settings vs. recalled context.
+
+    The API layer concatenates user-written platform instructions with retrieved
+    MemPalace memories and lore worldbook entries into one string. They carry very
+    different authority, so split them apart by block headers:
+      - 【来自记忆宫殿的历史相关记忆】 ...  -> recall (ask user-written rules never
+        to be overridden by these)
+      - 百科/世界书词条（可直接识别为 lore 块）-> recall
+      - anything else (platform channel rules, user-written scenario rules) -> platform
+
+    Every marker block is judged on its own: only the block that starts with a
+    recall/lore header goes to the recall bucket; surrounding platform text stays
+    platform no matter where it sits in the string.
+    """
+    if not text or not text.strip():
+        return {"platform": "", "recall": ""}
+
+    RECALL_HEADS = ("【来自记忆宫殿的历史相关记忆】",)
+    # Metadata header used by the API layer when it appends retrieved lore entries.
+    LORE_HEADS = ("【百科", "【世界书", "【设定集", "【世界观")
+
+    def _is_recall_block(block):
+        head = block.strip()
+        return head.startswith(RECALL_HEADS) or head.startswith(LORE_HEADS)
+
+    # Classify paragraph by paragraph so a recall header only claims its own block.
+    platform_parts, recall_parts = [], []
+    for block in re.split(r"\n{2,}", text):
+        if not block.strip():
+            continue
+        (recall_parts if _is_recall_block(block) else platform_parts).append(block.strip())
+    return {
+        "platform": "\n\n".join(platform_parts).strip(),
+        "recall": "\n\n".join(recall_parts).strip(),
+    }
 
 
 def _extract_platform_marker(text):
