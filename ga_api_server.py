@@ -902,7 +902,13 @@ def _save_api_dialogue(records):
 def _run_api_chat_turn(query, instructions="", attachments=None):
     # Serialise load -> native execution -> save as one transaction.
     with api_lock:
-        if api_agent is None or api_agent.is_running:
+        if api_agent is None:
+            raise HTTPException(status_code=503, detail="GenericAgent is not ready")
+        # Wait briefly if a previous native turn is still wrapping up its finally block
+        wait_deadline = time.monotonic() + 30.0
+        while api_agent.is_running and time.monotonic() < wait_deadline:
+            time.sleep(0.05)
+        if api_agent.is_running:
             raise HTTPException(status_code=503, detail="GenericAgent is busy")
         records = _load_api_dialogue()
         api_agent.llmclient.backend.history = _api_chat_history(records)
@@ -1174,9 +1180,19 @@ async def _sse_chat_stream_with_heartbeat(chat_id: str, created: int, model: str
         except asyncio.TimeoutError:
             # 标准 SSE 注释帧，Cloudflare 识别为数据活动重置 100s 超时计数器，客户端安全忽略
             yield ": keepalive\n\n"
+        except Exception:
+            break
             
-    full_response = await task
-    content = _clean_api_response(full_response)
+    try:
+        full_response = await task
+        content = _clean_api_response(full_response)
+    except HTTPException as exc:
+        print(f"[_sse_chat_stream] Turn failed with HTTP {exc.status_code}: {exc.detail}")
+        content = f"（通讯通道正忙或暂时中断：{exc.detail}，请稍后再试）"
+    except Exception as exc:
+        print(f"[_sse_chat_stream] Turn failed with unexpected error: {exc}")
+        content = f"（通讯通道异常：{exc}）"
+
     for piece in _iter_content_chunks(content):
         if piece:
             yield _sse_data(_openai_chat_chunk(chat_id, created, model, {"content": piece}))
@@ -1849,6 +1865,13 @@ async def completions(request: Request):
     }
 
 
+# In-flight deduplication state for duplicate client retries (e.g. Chatbox 5-9s double-fire)
+_inflight_chat_key: Optional[str] = None
+_inflight_chat_task: Optional[asyncio.Task] = None
+_inflight_chat_ts: float = 0.0
+_INFLIGHT_DEDUP_WINDOW: float = 25.0
+
+
 @app.post("/v1/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     """OpenAI 兼容的聊天接口"""
@@ -1940,15 +1963,33 @@ async def chat_completions(request: ChatCompletionRequest):
         created = int(time.time())
         chat_id = f"chatcmpl-{created}"
 
-        # 异步启动生成任务
-        turn_task = asyncio.create_task(
-            _execute_api_turn(
-                timestamped_message,
-                request.messages,
-                instructions=platform_instructions,
-                attachments=attachments,
+        # 针对客户端 5~9 秒自动重发/双发的同内容去重：若同一句话正在执行或刚在短窗内启动，
+        # 直接共享首个请求的 turn_task（首个请求带有完整的平台 system prompt），避免二次执行覆盖或 503 空返。
+        global _inflight_chat_key, _inflight_chat_task, _inflight_chat_ts
+        dedup_key = f"{platform_marker or ''}::{user_message.strip()}"
+        now_mono = time.monotonic()
+        if (
+            not attachments
+            and _inflight_chat_key == dedup_key
+            and _inflight_chat_task is not None
+            and (not _inflight_chat_task.done() or (now_mono - _inflight_chat_ts) < _INFLIGHT_DEDUP_WINDOW)
+            and not (_inflight_chat_task.done() and _inflight_chat_task.exception() is not None)
+        ):
+            print(f"[ChatCompletions] Deduplicating concurrent/retry request for key: {_safe_preview(dedup_key, 80)}")
+            turn_task = _inflight_chat_task
+        else:
+            turn_task = asyncio.create_task(
+                _execute_api_turn(
+                    timestamped_message,
+                    request.messages,
+                    instructions=platform_instructions,
+                    attachments=attachments,
+                )
             )
-        )
+            if not attachments:
+                _inflight_chat_key = dedup_key
+                _inflight_chat_task = turn_task
+                _inflight_chat_ts = now_mono
 
         if request.stream:
             # 流式传输：立即返回响应并在等待思考时持续输出 SSE 保活帧，彻底解决 Cloudflare 524 超时
